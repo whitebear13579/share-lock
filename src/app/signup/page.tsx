@@ -121,7 +121,7 @@ export default function Login() {
                 Github
               </Button>
             </div>
-            <Link href="/signup" className="active:scale-95 transition-all duration-200 block">
+            <Link href="/login" className="active:scale-95 transition-all duration-200 block">
               <div className="flex items-center w-full gap-3 text-gray-300 text-base">
                 <div className="h-1 flex-1 bg-white/20 rounded-full"></div>
                 <span>已經有帳號了嗎？ &nbsp;<span className="text-sky-300 font-bold hover:underline">立即登入！</span></span>

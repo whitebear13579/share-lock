@@ -18,9 +18,11 @@ export default function Home() {
     <div className="flex flex-col min-h-screen max-h-screen bg-neutral-800 overflow-hidden">
       <div className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
         <div className="absolute top-6 right-6">
-          <CustomButton variant="blur" size="lg" radius="full" startContent={<LogIn size={18} className="text-gray-200"/>} className="text-base hover:bg-white/20 text-gray-200">
-            登入
-          </CustomButton>
+          <Link href="/login">
+            <CustomButton variant="blur" size="lg" radius="full" startContent={<LogIn size={18} className="text-gray-200"/>} className="text-base hover:bg-white/20 text-gray-200">
+              登入
+            </CustomButton>
+          </Link>
         </div>
         <div className="flex flex-col items-center">
           <Image 
