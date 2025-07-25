@@ -9,7 +9,7 @@ import { Button } from "@heroui/button";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 
-export default function Login() {
+export default function Signup() {
     const [homeUrl, setHomeUrl] = useState("");
   
     useEffect(() => {
