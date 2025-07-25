@@ -24,7 +24,7 @@ export default function RootLayout({
           {`emfont.init();`}
         </Script>
       </head>
-      <body className="emfont-GenYoGothicTC">
+      <body className="emfont-NotoSansTC">
         <HeroUIProvider>
           {children}
         </HeroUIProvider>
