@@ -167,8 +167,8 @@ export default function Home() {
         </div>
         <div ref={formRef} className="flex flex-col items-center justify-center relative border-2 border-white/20 w-[90%] sm:w-2/3 md:w-2/5 min-h-28 rounded-xl p-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide">
           <div className="flex flex-col items-center space-y-4 w-full">
-            <div className="flex flex-col xl:flex-row items-center space-y-3 xl:space-y-0 lg:space-x-3 w-full">
-              <div className="relative flex-1 w-full xl:w-auto transition-all duration-300 active:scale-98">
+            <div className="flex flex-col xl:flex-row items-center space-y-3 xl:space-y-0 xl:space-x-3 w-full">
+              <div className="relative flex-1 w-full transition-all duration-300 active:scale-98">
                 <CustomInput
                   size="sm"
                   label="輸入分享連結？"
