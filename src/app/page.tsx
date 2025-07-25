@@ -1,103 +1,75 @@
+'use client';
+import { LogIn, SendHorizonal, Upload } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useState, useEffect } from "react";
+import CustomButton from "@/components/button";
+import CustomInput from "@/components/input";
 
 export default function Home() {
+  const [homeUrl, setHomeUrl] = useState("");
+  
+  useEffect(() => {
+    // 確保 homeUrl 只在客戶端設定，避免 hydration 不一致
+    setHomeUrl(process.env.NEXT_PUBLIC_HOME_URL ?? "");
+  }, []);
+  
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="flex flex-col min-h-screen max-h-screen bg-neutral-800 overflow-hidden">
+      <div className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
+        <div className="absolute top-6 right-6">
+          <CustomButton variant="blur" size="lg" radius="full" startContent={<LogIn size={18} className="text-gray-200"/>} className="text-base hover:bg-white/20 text-gray-200">
+            登入
+          </CustomButton>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <div className="flex flex-col items-center">
+          <Image 
+            src="/icon.svg" 
+            alt="logo" 
+            width={300}
+            height={0}
+            className="w-[70vw] sm:w-[50vw] md:w-[25vw] h-auto object-contain"
+          />  
+          <div className="tracking-widest text-xl md:text-2xl font-bold mb-8 mt-4 text-white">
+            一個安全、高效的檔案分享軟體。
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center relative border-2 border-white/20 w-[90%] sm:w-2/3 md:w-2/5 min-h-28 rounded-xl p-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide">
+          <div className="flex flex-col items-center space-y-4 w-full">
+            <div className="flex flex-col xl:flex-row items-center space-y-3 xl:space-y-0 lg:space-x-3 w-full">
+              <div className="relative flex-1 w-full xl:w-auto transition-all duration-300 active:scale-98">
+                <CustomInput
+                  size="sm"
+                  label="輸入分享連結？"
+                  className="w-full pr-20"
+                >
+                </CustomInput>
+                <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                  <div className="overflow-hidden rounded-full">
+                    <CustomButton 
+                      variant="blur" 
+                      size="sm"
+                      radius="full"
+                      startContent={<SendHorizonal size={18} className="text-sky-300 group-hover:text-gray-800 transition-colors duration-200"/>}
+                      className=" bg-white/15 border-white/20 border hover:bg-sky-400 hover:text-gray-800 !min-w-8 h-8 overflow-visible"
+                    >
+                    </CustomButton>
+                  </div>
+                </div>
+              </div>
+              <div className="text-white/70 px-3 text-lg">或者</div>
+              <div className="overflow-hidden rounded-full shadow-2xl">
+                <CustomButton variant="blur" size="lg" radius="full" startContent={<Upload size={20} className="text-green-400 group-hover:text-gray-800 transition-colors duration-200"/>} className="text-lg hover:bg-emerald-400 hover:text-gray-800 text-gray-200 lg:w-auto justify-center overflow-visible group">
+                  上傳檔案
+                </CustomButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="px-6 py-5 flex w-full flex-shrink-0 justify-center md:justify-start">
+        <p className="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">© 2025 <span className=" text-blue-500 font-bold"><Link href={homeUrl} className="hover:underline">Share Lock</Link></span>&nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.</p>
+      </div>
     </div>
   );
 }

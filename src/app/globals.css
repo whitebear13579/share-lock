@@ -1,15 +1,33 @@
 @import "tailwindcss";
+@plugin './hero.ts';
+@source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --radius-5xl: 2.5rem;
+}
+
+/* 覆蓋 HeroUI 的字體大小設定*/
+@layer utilities {
+  .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
+  .text-sm { font-size: 0.875rem !important; line-height: 1.25rem !important; }
+  .text-base { font-size: 1rem !important; line-height: 1.5rem !important; }
+  .text-lg { font-size: 1.125rem !important; line-height: 1.75rem !important; }
+  .text-xl { font-size: 1.25rem !important; line-height: 1.75rem !important; }
+  .text-2xl { font-size: 1.5rem !important; line-height: 2rem !important; }
+  .text-3xl { font-size: 1.875rem !important; line-height: 2.25rem !important; }
+  .text-4xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
+  .text-5xl { font-size: 3rem !important; line-height: 1 !important; }
+  .text-6xl { font-size: 3.75rem !important; line-height: 1 !important; }
+  .text-7xl { font-size: 4.5rem !important; line-height: 1 !important; }
+  .text-8xl { font-size: 6rem !important; line-height: 1 !important; }
+  .text-9xl { font-size: 8rem !important; line-height: 1 !important; }
+}
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --radius-5xl: 40px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +40,4 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
