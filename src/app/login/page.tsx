@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import CustomButton from "@/components/button";
 import CustomInput from "@/components/input";
-import { Eye, EyeClosed, LogIn, CircleQuestionMark } from "lucide-react";
+import { Eye, EyeClosed, LogIn } from "lucide-react";
 import { Button } from "@heroui/button";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
