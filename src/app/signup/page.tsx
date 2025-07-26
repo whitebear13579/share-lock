@@ -13,14 +13,8 @@ import { FaGithub } from "react-icons/fa";
 import PageTransition from "@/components/PageTransition";
 
 export default function Signup() {
-    const [homeUrl, setHomeUrl] = useState("");
     const router = useRouter();
     const formContainerRef = useRef<HTMLDivElement>(null);
-  
-    useEffect(() => {
-      // 確保 homeUrl 只在客戶端設定，避免 hydration 不一致
-      setHomeUrl(process.env.NEXT_PUBLIC_HOME_URL ?? "");
-    }, []);
 
     const [isPwdVisible, setIsPwdVisible] = React.useState(false);
     const toggleVisbility = () => setIsPwdVisible(!isPwdVisible);
@@ -228,7 +222,7 @@ export default function Signup() {
         </div>
       </div>
       <div className="px-6 py-5 flex w-full flex-shrink-0 justify-center md:justify-start">
-        <p className="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">© 2025 <span className=" text-blue-500 font-bold"><Link href={homeUrl} className="hover:underline" prefetch={false}>Share Lock</Link></span>&nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.</p>
+        <p className="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">© 2025 <span className=" text-blue-500 font-bold"><Link href="/" className="hover:underline" prefetch={false}>Share Lock</Link></span>&nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.</p>
       </div>
     </div>
     </PageTransition>

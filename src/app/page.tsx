@@ -10,18 +10,12 @@ import CustomInput from "@/components/input";
 import PageTransition from "@/components/PageTransition";
 
 export default function Home() {
-  const [homeUrl, setHomeUrl] = useState("");
   const router = useRouter();
   const logoRef = useRef<HTMLImageElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
   const loginBtnRef = useRef<HTMLDivElement>(null);
   const pdfDownBtnRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    // 確保 homeUrl 只在客戶端設定，避免 hydration 不一致
-    setHomeUrl(process.env.NEXT_PUBLIC_HOME_URL ?? "");
-  }, []);
 
   // animation setup
   useEffect(() => {
@@ -199,7 +193,7 @@ export default function Home() {
         </div>
       </div>
       <div className="px-6 py-5 flex w-full flex-shrink-0 justify-center md:justify-start">
-        <p className="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">© 2025 <span className=" text-blue-500 font-bold"><Link href={homeUrl} className="hover:underline" prefetch={false}>Share Lock</Link></span>&nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.</p>
+        <p className="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">© 2025 <span className=" text-blue-500 font-bold"><Link href="/" className="hover:underline" prefetch={false}>Share Lock</Link></span>&nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.</p>
       </div>
     </div>
     </PageTransition>
