@@ -118,7 +118,7 @@ export default function Signup() {
     <PageTransition>
       <div className="flex flex-col min-h-screen max-h-screen bg-neutral-800 overflow-hidden">
       <div className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
-        <div ref={formContainerRef} className="flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl p-8 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide">
+        <div ref={formContainerRef} className="flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide">
           <div className="flex felx-col space-x-2 text-3xl font-bold gap-2 text-white pb-6">
             <span>註冊</span>
           </div>
