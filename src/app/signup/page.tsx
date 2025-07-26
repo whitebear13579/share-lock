@@ -200,7 +200,7 @@ export default function Signup() {
                 size="lg"
                 radius="full"
                 startContent={<FcGoogle size={25} className="flex-shrink-0"/>}
-                className="text-lg bg-white text-black shadow-2xl"
+                className="text-lg bg-white text-black shadow-2xl !active:scale-100 transition-all duration-200"
               >
                 Google
               </Button>
@@ -208,7 +208,7 @@ export default function Signup() {
                 size="lg"
                 radius="full"
                 startContent={<FaGithub size={25} color="white" className="flex-shrink-0" />}
-                className="text-lg bg-zinc-900 text-white shadow-2xl"
+                className="text-lg bg-zinc-900 text-white shadow-2xl !active:scale-100 transition-all duration-200"
               >
                 Github
               </Button>
