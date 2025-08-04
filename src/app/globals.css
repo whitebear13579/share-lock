@@ -24,6 +24,25 @@
   .text-9xl { font-size: 8rem !important; line-height: 1 !important; }
 }
 
+.custom-button-trans-override {
+  transform: none !important;
+  transition: all 200ms ease !important;
+}
+
+.custom-button-trans-override:active {
+  scale: 95% 95% !important;
+}
+
+.custom-input-trans-animate {
+  transform: none !important;
+  transition: all 200ms ease !important;
+}
+
+.custom-input-trans-animate:active{
+  scale: 97% 97% !important;
+}
+
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

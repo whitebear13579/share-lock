@@ -162,7 +162,7 @@ export default function Home() {
         <div ref={formRef} className="flex flex-col items-center justify-center relative border-2 border-white/20 w-[90%] sm:w-2/3 md:w-2/5 min-h-28 rounded-xl p-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide">
           <div className="flex flex-col items-center space-y-4 w-full">
             <div className="flex flex-col xl:flex-row items-center space-y-3 xl:space-y-0 xl:space-x-3 w-full">
-              <div className="relative flex-1 w-full transition-all duration-300 active:scale-98">
+              <div className="relative flex-1 w-full custom-input-trans-animate">
                 <CustomInput
                   size="sm"
                   label="輸入分享連結？"
@@ -182,7 +182,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <div className="text-white/70 px-3 text-lg">或者</div>
+              <div className="text-white/70 px-3 text-lg transition-all">或者</div>
               <div className="overflow-hidden rounded-full shadow-2xl">
                 <CustomButton variant="blur" size="lg" radius="full" startContent={<Upload size={20} className="text-green-400 group-hover:text-gray-800 transition-colors duration-200"/>} className="text-lg hover:bg-emerald-400 hover:text-gray-800 text-gray-200 lg:w-auto justify-center overflow-visible group">
                   上傳檔案

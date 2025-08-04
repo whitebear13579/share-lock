@@ -117,19 +117,19 @@ export default function Signup() {
             <span>註冊</span>
           </div>
           <div className="w-full max-w-md space-y-5 flex flex-col items-center">
-            <div className="w-full transform active:scale-97 origin-center transition-all duration-300">
+            <div className="w-full origin-center custom-input-trans-animate">
               <CustomInput
                 label="使用者名稱"
                 size="sm"
               />
             </div>
-            <div className="w-full transform active:scale-97 origin-center transition-all duration-300">
+            <div className="w-full origin-center custom-input-trans-animate">
               <CustomInput
                 label="電子郵件"
                 size="sm"
               />
             </div>
-            <div className="relative w-full transform active:scale-97 origin-center transition-all duration-300">
+            <div className="relative w-full origin-center custom-input-trans-animate">
               <CustomInput
                 label="密碼"
                 size="sm"
@@ -151,7 +151,7 @@ export default function Signup() {
                 )}
               </Button>
             </div>
-            <div className="relative w-full transform active:scale-97 origin-center transition-all duration-300">
+            <div className="relative w-full origin-center custom-input-trans-animate">
               <CustomInput
                 label="確認密碼"
                 size="sm"
@@ -174,15 +174,13 @@ export default function Signup() {
               </Button>
             </div>
             <div className="flex w-full justify-center">
-              <div className="active:scale-95 transition-all duration-200">
-                <CustomButton 
-                  variant="blur"
-                  size="lg"
-                  radius="full"
-                  startContent={<LogIn size={20}/>}
-                  className="text-white text-lg bg-blue-500 border-0 px-4 sm:px-6 "
-                >Let's Go&nbsp;!</CustomButton>
-              </div>
+              <CustomButton 
+                variant="blur"
+                size="lg"
+                radius="full"
+                startContent={<LogIn size={20}/>}
+                className="text-white text-lg bg-blue-500 border-0 px-4 sm:px-6 custom-button-trans-override"
+              >Let's Go&nbsp;!</CustomButton>
             </div>
             <div className="flex items-center w-full gap-3 text-gray-300 text-base">
               <div className="h-1 flex-1 bg-white/20 rounded-full"></div>
@@ -194,7 +192,7 @@ export default function Signup() {
                 size="lg"
                 radius="full"
                 startContent={<FcGoogle size={25} className="flex-shrink-0"/>}
-                className="text-lg bg-white text-black shadow-2xl !active:scale-100 transition-all duration-200"
+                className="text-lg bg-white text-black shadow-2xl custom-button-trans-override"
               >
                 Google
               </Button>
@@ -202,7 +200,7 @@ export default function Signup() {
                 size="lg"
                 radius="full"
                 startContent={<FaGithub size={25} color="white" className="flex-shrink-0" />}
-                className="text-lg bg-zinc-900 text-white shadow-2xl !active:scale-100 transition-all duration-200"
+                className="text-lg bg-zinc-900 text-white shadow-2xl custom-button-trans-override"
               >
                 Github
               </Button>

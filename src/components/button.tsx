@@ -8,7 +8,7 @@ interface CustomButtonProps extends Omit<ButtonProps, "variant"> {
 const CustomButton = forwardRef<HTMLButtonElement, CustomButtonProps>(
 ({ variant = "blur", className, children, size = "lg", ...props }, ref) => {
     const variantClasses = {
-      blur: "relative flex items-center font-medium gap-2 bg-white/10 border border-white/30 transition-all duration-200 shadow-2xl text-base px-4 !active:scale-100",
+      blur: "custom-button-trans-override relative flex items-center font-medium gap-2 bg-white/10 border border-white/30 !transition-all !duration-200 shadow-2xl text-base px-4",
     };
 
     return (
