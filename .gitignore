@@ -12,11 +12,9 @@
 
 # testing
 /coverage
-src/components/Firebase_test.tsx
 src/contexts/*
-src/lib/firestore.ts
-src/lib/storage.ts
 
+#
 
 # next.js
 /.next/
