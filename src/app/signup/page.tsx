@@ -112,11 +112,11 @@ export default function Signup() {
     <PageTransition>
       <div className="flex flex-col min-h-screen max-h-screen bg-neutral-800 overflow-hidden">
       <div className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
-        <div ref={formContainerRef} className="flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide">
-          <div className="flex felx-col space-x-2 text-3xl font-bold gap-2 text-white pb-6">
-            <span>註冊</span>
+        <div ref={formContainerRef} className="max-h-[85vh] flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide">
+          <div className="flex items-center justify-center w-full text-3xl font-bold text-white pb-6">
+            註冊
           </div>
-          <div className="w-full max-w-md space-y-5 flex flex-col items-center">
+          <div className="w-full max-w-md space-y-3.5 flex flex-col items-center">
             <div className="w-full origin-center custom-input-trans-animate">
               <CustomInput
                 label="使用者名稱"
@@ -173,13 +173,20 @@ export default function Signup() {
                 )}
               </Button>
             </div>
+            <div className="flex flex-col items-center justify-center text-xs text-gray-300 pt-2 pb-0">
+              <div className="text-center">註冊即代表您同意&nbsp;
+                <Link href="/privacy-policy" className="text-sky-300 font-bold hover:underline active:scale-95 transition-all duration-200 inline-block">隱私權政策</Link>
+                &nbsp;與&nbsp;
+                <Link href="/terms-of-service" className="text-sky-300 font-bold hover:underline active:scale-95 transition-all duration-200 inline-block">使用條款</Link>
+              </div>
+            </div>
             <div className="flex w-full justify-center">
               <CustomButton 
                 variant="blur"
                 size="lg"
                 radius="full"
                 startContent={<LogIn size={20}/>}
-                className="text-white text-lg bg-blue-500 border-0 px-4 sm:px-6 custom-button-trans-override"
+                className="text-white !text-sm sm:!text-lg bg-blue-500 border-0 px-4 sm:px-6 custom-button-trans-override"
               >Let's Go&nbsp;!</CustomButton>
             </div>
             <div className="flex items-center w-full gap-3 text-gray-300 text-base">
@@ -187,12 +194,12 @@ export default function Signup() {
               <span>或者，使用以下方式註冊</span>
               <div className="h-1 flex-1 bg-white/20 rounded-full"></div>
             </div>
-            <div className="flex items-center gap-10 font-normal max-w-full">
+            <div className="flex items-center gap-4 sm:gap-6 md:gap-10 font-normal max-w-full">
               <Button
                 size="lg"
                 radius="full"
                 startContent={<FcGoogle size={25} className="flex-shrink-0"/>}
-                className="text-lg bg-white text-black shadow-2xl custom-button-trans-override"
+                className="!test-base sm:!text-lg bg-white text-black shadow-2xl custom-button-trans-override px-4 sm:px-6 flex-1 sm:flex-initial"
               >
                 Google
               </Button>
@@ -200,7 +207,7 @@ export default function Signup() {
                 size="lg"
                 radius="full"
                 startContent={<FaGithub size={25} color="white" className="flex-shrink-0" />}
-                className="text-lg bg-zinc-900 text-white shadow-2xl custom-button-trans-override"
+                className="!test-base sm:!text-lg bg-zinc-900 text-white shadow-2xl custom-button-trans-override px-4 sm:px-6 flex-1 sm:flex-initial"
               >
                 Github
               </Button>
@@ -212,7 +219,10 @@ export default function Signup() {
             >
               <div className="flex items-center w-full gap-3 text-gray-300 text-base">
                 <div className="h-1 flex-1 bg-white/20 rounded-full"></div>
-                <span>已經有帳號了嗎？ &nbsp;<span className="text-sky-300 font-bold hover:underline">立即登入！</span></span>
+                <span className="text-center">
+                  <span className="inline sm:inline">已經有帳號了嗎？</span>
+                  <span className="inline-block whitespace-nowrap">&nbsp;<span className="text-sky-300 font-bold hover:underline">立即登入！</span></span>
+                </span>
                 <div className="h-1 flex-1 bg-white/20 rounded-full"></div>
               </div>
             </Link>
