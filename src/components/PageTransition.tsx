@@ -3,11 +3,11 @@ import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { gsap } from 'gsap';
 
-interface PageTransitionProps {
+interface pageTransitionProps {
   children: React.ReactNode;
 }
 
-export default function PageTransition({ children }: PageTransitionProps) {
+export default function pageTransition({ children }: pageTransitionProps) {
   const pathname = usePathname();
   const containerRef = useRef<HTMLDivElement>(null);
   const prevPathnameRef = useRef<string>('');

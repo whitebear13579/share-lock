@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import CustomButton from "@/components/button";
 import CustomInput from "@/components/input";
-import PageTransition from "@/components/PageTransition";
+import PageTransition from "@/components/pageTransition";
 
 export default function Home() {
   const router = useRouter();
