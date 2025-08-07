@@ -4,12 +4,15 @@ import { forwardRef, useState, useEffect } from "react";
 
 interface CustomInputProps extends Omit<InputProps, "variant"> {
     variant?: "blur";
+    isInvalid?: boolean;
+    errorMessage?: string;
 }
 
 const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
-({ variant = "blur", className, children, size = "lg", value, defaultValue, onChange, ...props }, ref) => {
+({ variant = "blur", className, children, size = "lg", value, defaultValue, onChange, isInvalid, errorMessage, ...props }, ref) => {
     const [internalValue, setInternalValue] = useState(value || defaultValue || '');
     const [isFocused, setIsFocused] = useState(false);
+    
     
     useEffect(() => {
         if (value !== undefined) {
@@ -46,7 +49,15 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
           "bg-transparent",
           "placeholder:text-gray-200"
         ],
-        inputWrapper: [
+        inputWrapper: isInvalid ? [
+          "hover:!bg-red-500/40",
+          "focus-within:!bg-red-500/40",
+          "data-[hover=true]:!bg-red-500/40",
+          "!bg-red-500/20",
+          "!border-2",
+          "!border-red-500/60"
+        ] :
+        [
           "bg-white/10",
           "border",
           "border-white/30",
@@ -56,6 +67,14 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
           "duration-200",
           "shadow-2xl",
           "group"
+        ],
+        errorMessage: [
+          "px-2",
+          "text-xs",
+          "text-red-500",
+          "font-semibold",
+          "italic",
+          ""
         ]
       }
     };
@@ -69,6 +88,8 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
         className={shouldShowSmallLabel ? "[&_label]:!text-xs [&_label]:!font-thin [&_label]:!-translate-y-3 [&_label]:!scale-90" : "[&_label]:!text-lg"}
         value={value}
         defaultValue={defaultValue}
+        isInvalid={isInvalid}
+        errorMessage={errorMessage}
         onChange={(e) => {
           setInternalValue(e.target.value);
           onChange?.(e);
