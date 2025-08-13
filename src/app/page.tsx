@@ -1,6 +1,6 @@
 'use client';
 import { FileText, LogIn, SendHorizonal, Upload } from "lucide-react";
-import Image from "next/image";
+import NextImage from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,8 @@ import { gsap } from "gsap";
 import CustomButton from "@/components/button";
 import CustomInput from "@/components/input";
 import PageTransition from "@/components/pageTransition";
+import { useAuth } from "@/utils/authProvider";
+import { Image } from "@heroui/react";
 
 export default function Home() {
   const router = useRouter();
@@ -16,6 +18,8 @@ export default function Home() {
   const formRef = useRef<HTMLDivElement>(null);
   const loginBtnRef = useRef<HTMLDivElement>(null);
   const pdfDownBtnRef = useRef<HTMLDivElement>(null);
+
+  const { user, loading } = useAuth();
 
   // animation setup
   useEffect(() => {
@@ -134,20 +138,28 @@ export default function Home() {
       <div className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
         <div className="absolute top-6 right-6 flex space-x-3">
           <div ref={pdfDownBtnRef}>
-            <CustomButton variant="blur" size="lg" radius="full" startContent={<FileText size={18} className="text-gray-200"/>} className="text-base hover:bg-white/20 text-gray-200">
+            <CustomButton variant="blur" size="lg" radius="full" startContent={<FileText size={18} className="text-gray-200"/>} isDisabled={loading} className="text-base hover:bg-white/20 text-gray-200">
               PDF 下載
             </CustomButton>
           </div>
           <div ref={loginBtnRef}>
-            <Link href="/login" prefetch={false}>
-              <CustomButton variant="blur" size="lg" radius="full" startContent={<LogIn size={18} className="text-gray-200"/>} className="text-base hover:bg-white/20 text-gray-200">
-                登入
-              </CustomButton>
-            </Link>
+            { user ?
+              <Link href="/dashboard" prefetch={false}>
+                <CustomButton variant="blur" size="lg" radius="full" startContent={ <Image alt="使用者頭像" src={user.photoURL ? user.photoURL : undefined } height={30} className="rounded-full" ></Image> } isDisabled={loading} className="text-base hover:bg-white/20 text-gray-200">
+                  {user.displayName}
+                </CustomButton>
+              </Link>
+             :
+              <Link href="/login" prefetch={false}>
+                <CustomButton variant="blur" size="lg" radius="full" startContent={<LogIn size={18} className="text-gray-200"/>} className="text-base hover:bg-white/20 text-gray-200">
+                  登入
+                </CustomButton>
+              </Link>
+            }
           </div>
         </div>
         <div className="flex flex-col items-center">
-          <Image 
+          <NextImage 
             ref={logoRef}
             src="/icon.svg" 
             alt="logo" 
@@ -177,6 +189,7 @@ export default function Home() {
                       radius="full"
                       startContent={<SendHorizonal size={18} className="text-sky-300 group-hover:text-gray-800 transition-colors duration-200"/>}
                       className=" bg-white/15 border-white/20 border hover:bg-sky-400 hover:text-gray-800 !min-w-8 h-8 overflow-visible"
+                      isDisabled={loading}
                     >
                     </CustomButton>
                   </div>
@@ -184,7 +197,7 @@ export default function Home() {
               </div>
               <div className="text-white/70 px-3 text-lg transition-all">或者</div>
               <div className="overflow-hidden rounded-full shadow-2xl">
-                <CustomButton variant="blur" size="lg" radius="full" startContent={<Upload size={20} className="text-green-400 group-hover:text-gray-800 transition-colors duration-200"/>} className="text-lg hover:bg-emerald-400 hover:text-gray-800 text-gray-200 lg:w-auto justify-center overflow-visible group">
+                <CustomButton variant="blur" size="lg" radius="full" startContent={<Upload size={20} className="text-green-400 group-hover:text-gray-800 transition-colors duration-200"/>} isDisabled={loading} className="text-lg hover:bg-emerald-400 hover:text-gray-800 text-gray-200 lg:w-auto justify-center overflow-visible group">
                   上傳檔案
                 </CustomButton>
               </div>
