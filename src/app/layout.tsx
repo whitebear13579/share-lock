@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { HeroUIProvider } from "@heroui/react";
-import { AuthProvider } from "@/utils/AuthContext";
+import { AuthProvider } from "@/utils/authProvider";
 
 export const metadata: Metadata = {
   title: "Create Next App",

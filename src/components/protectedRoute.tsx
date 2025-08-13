@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect } from 'react';
-import { useAuth } from '@/utils/AuthContext';
+import { useAuth } from '@/utils/authProvider';
 import { useRouter } from 'next/navigation';
 import { Spinner } from "@heroui/react";
 
