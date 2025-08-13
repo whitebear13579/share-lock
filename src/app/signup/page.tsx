@@ -63,6 +63,11 @@ export default function Signup() {
             setUsernameError("請輸入使用者名稱");
             isValid = false;
         }
+
+        if (username.length >  20) {
+            setUsernameError("使用者名稱需小於 20 字元");
+            isValid = false;
+        }
         
         if (!email.trim()) {
             setEmailError("請輸入電子郵件");
