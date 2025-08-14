@@ -12,7 +12,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 import PageTransition from "@/components/pageTransition";
 import ProtectedRoute from "@/components/protectedRoute";
-import { auth } from "@/utils/firebase";
+import { auth, getPasswordResetActionCodeSettings } from "@/utils/firebase";
 import { 
   signInWithEmailAndPassword, 
   signInWithPopup, 
@@ -111,7 +111,8 @@ export default function Login() {
       clearFieldErrors();
 
       try {
-        await sendPasswordResetEmail(auth, email);
+        const actionCodeSettings = getPasswordResetActionCodeSettings();
+        await sendPasswordResetEmail(auth, email, actionCodeSettings);
         setResetEmailSent(true);
         setError("密碼重設信已發送");
       } catch (error: any) {
