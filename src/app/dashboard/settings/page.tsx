@@ -44,7 +44,6 @@ export default function Dashboard() {
                     <div className="text-gray-200 flex items-center gap-2 cursor-pointer hover:text-white transition-colors relative z-10">
                         <House size={18} />
                         資訊主頁
-                        <div className="absolute -inset-x-6 -inset-y-2.5 bg-neutral-950/60 rounded-full -z-10"></div>
                     </div>
                     <div className="text-gray-200 flex items-center gap-2 cursor-pointer hover:text-white transition-colors relative z-10">
                         <Folder size={18} />
@@ -53,6 +52,7 @@ export default function Dashboard() {
                     <div className="text-gray-200 flex items-center gap-2 cursor-pointer hover:text-white transition-colors relative z-10">
                         <Cog size={18} />
                         帳號設定
+                        <div className="absolute -inset-x-6 -inset-y-2.5 bg-neutral-950/60 rounded-full -z-10"></div>
                     </div>
                     <div className="text-gray-200 flex items-center gap-2 cursor-pointer hover:text-white transition-colors relative z-10">
                         <Star size={18} />
