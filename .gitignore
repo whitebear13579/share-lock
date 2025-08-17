@@ -14,7 +14,8 @@
 /coverage
 src/contexts/*
 
-#
+#.vscode
+.vscode/*
 
 # next.js
 /.next/
