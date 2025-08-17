@@ -4,59 +4,97 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --radius-5xl: 2.5rem;
+    --radius-5xl: 2.5rem;
 }
 
 /* 覆蓋 HeroUI 的字體大小設定*/
 @layer utilities {
-  .text-xs { font-size: 0.75rem !important; line-height: 1rem !important; }
-  .text-sm { font-size: 0.875rem !important; line-height: 1.25rem !important; }
-  .text-base { font-size: 1rem !important; line-height: 1.5rem !important; }
-  .text-lg { font-size: 1.125rem !important; line-height: 1.75rem !important; }
-  .text-xl { font-size: 1.25rem !important; line-height: 1.75rem !important; }
-  .text-2xl { font-size: 1.5rem !important; line-height: 2rem !important; }
-  .text-3xl { font-size: 1.875rem !important; line-height: 2.25rem !important; }
-  .text-4xl { font-size: 2.25rem !important; line-height: 2.5rem !important; }
-  .text-5xl { font-size: 3rem !important; line-height: 1 !important; }
-  .text-6xl { font-size: 3.75rem !important; line-height: 1 !important; }
-  .text-7xl { font-size: 4.5rem !important; line-height: 1 !important; }
-  .text-8xl { font-size: 6rem !important; line-height: 1 !important; }
-  .text-9xl { font-size: 8rem !important; line-height: 1 !important; }
+    .text-xs {
+        font-size: 0.75rem !important;
+        line-height: 1rem !important;
+    }
+    .text-sm {
+        font-size: 0.875rem !important;
+        line-height: 1.25rem !important;
+    }
+    .text-base {
+        font-size: 1rem !important;
+        line-height: 1.5rem !important;
+    }
+    .text-lg {
+        font-size: 1.125rem !important;
+        line-height: 1.75rem !important;
+    }
+    .text-xl {
+        font-size: 1.25rem !important;
+        line-height: 1.75rem !important;
+    }
+    .text-2xl {
+        font-size: 1.5rem !important;
+        line-height: 2rem !important;
+    }
+    .text-3xl {
+        font-size: 1.875rem !important;
+        line-height: 2.25rem !important;
+    }
+    .text-4xl {
+        font-size: 2.25rem !important;
+        line-height: 2.5rem !important;
+    }
+    .text-5xl {
+        font-size: 3rem !important;
+        line-height: 1 !important;
+    }
+    .text-6xl {
+        font-size: 3.75rem !important;
+        line-height: 1 !important;
+    }
+    .text-7xl {
+        font-size: 4.5rem !important;
+        line-height: 1 !important;
+    }
+    .text-8xl {
+        font-size: 6rem !important;
+        line-height: 1 !important;
+    }
+    .text-9xl {
+        font-size: 8rem !important;
+        line-height: 1 !important;
+    }
 }
 
 .custom-button-trans-override {
-  transform: none !important;
-  transition: all 200ms ease !important;
+    transform: none !important;
+    transition: all 200ms ease !important;
 }
 
 .custom-button-trans-override:active {
-  scale: 95% 95% !important;
+    scale: 95% 95% !important;
 }
 
 .custom-input-trans-animate {
-  transform: none !important;
-  transition: all 200ms ease !important;
+    transform: none !important;
+    transition: all 200ms ease !important;
 }
 
-.custom-input-trans-animate:active{
-  scale: 97% 97% !important;
+.custom-input-trans-animate:active {
+    scale: 97% 97% !important;
 }
-
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --radius-5xl: 40px;
+    --background: #ffffff;
+    --foreground: #171717;
+    --radius-5xl: 40px;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+    :root {
+        --background: #0a0a0a;
+        --foreground: #ededed;
+    }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+    background: var(--background);
+    color: var(--foreground);
 }
