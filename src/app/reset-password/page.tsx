@@ -134,7 +134,7 @@ export default function ResetPassword() {
                 try {
                     await handlePageExit();
                     await new Promise((resolve) => setTimeout(resolve, 100));
-                    window.location.href = "/login";
+                    router.push("/login");
                 } catch (error) {
                     router.push("/login");
                 }
@@ -350,34 +350,71 @@ export default function ResetPassword() {
             }
 
             if (!element) {
+                console.log("No element found, resolving now");
                 setTimeout(() => resolve(), 100);
                 return;
             }
 
             gsap.killTweensOf(element);
 
-            gsap.to(element, {
+            let animationCompleted = false;
+
+            const timeout = setTimeout(() => {
+                if (!animationCompleted) {
+                    animationCompleted = true;
+                    resolve();
+                }
+            }, 450);
+
+            const tween = gsap.to(element, {
                 y: 100,
                 opacity: 0,
                 duration: 0.4,
                 ease: "power2.in",
                 onComplete: () => {
-                    resolve();
+                    if (!animationCompleted) {
+                        animationCompleted = true;
+                        clearTimeout(timeout);
+                        resolve();
+                    }
                 },
+                onInterrupt: () => {
+                    if (!animationCompleted) {
+                        animationCompleted = true;
+                        clearTimeout(timeout);
+                        resolve();
+                    }
+                }
             });
         });
     };
 
     useEffect(() => {
         let isNavigating = false;
+        let lastProcessedTimestamp = 0;
 
         const handleClick = async (e: MouseEvent) => {
-            if (!e.target || isNavigating) return;
+            if ((e as any).__handled) {
+                return;
+            }
+
+            const currentTimestamp = Date.now();
+            if (currentTimestamp - lastProcessedTimestamp < 50) {
+                return;
+            }
+            lastProcessedTimestamp = currentTimestamp;
+
+            if (!e.target || isNavigating) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
 
             let currentElement = e.target as Node;
             let link: HTMLAnchorElement | null = null;
 
-            // find element!
             if (
                 currentElement.nodeType === 1 &&
                 (currentElement as Element).tagName === "A"
@@ -399,24 +436,35 @@ export default function ResetPassword() {
             if (link) {
                 const href = link.getAttribute("href");
                 if (href && (href.startsWith("/") || href.startsWith("#"))) {
+                    const originalHref = href;
+                    link.removeAttribute("href");
+                    link.style.pointerEvents = "none";
+
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
+
+                    (e as any).__handled = true;
+
+                    if (isNavigating) {
+                        link.setAttribute("href", originalHref);
+                        link.style.pointerEvents = "";
+                        return;
+                    }
                     isNavigating = true;
 
                     try {
-                        await new Promise((resolve) => setTimeout(resolve, 50));
                         await handlePageExit();
-                        await new Promise((resolve) =>
-                            setTimeout(resolve, 100)
-                        );
-                        window.location.href = href;
+                        router.push(originalHref);
                     } catch (error) {
-                        router.push(href);
+                        console.error("transition failed!!!:", error);
+                        router.push(originalHref);
                     } finally {
+                        link.setAttribute("href", originalHref);
+                        link.style.pointerEvents = "";
                         setTimeout(() => {
                             isNavigating = false;
-                        }, 1000);
+                        }, 100);
                     }
                 }
             }
@@ -500,11 +548,10 @@ export default function ResetPassword() {
 
                             <div
                                 ref={errorBoxRef}
-                                className={`w-full max-w-md p-1.5 border-2 rounded-full text-sm text-center flex items-center justify-center gap-2 ${
-                                    success
-                                        ? "bg-green-500/20 border-green-500/50 text-green-200"
-                                        : "bg-red-500/20 border-red-500/50 text-red-200"
-                                }`}
+                                className={`w-full max-w-md p-1.5 border-2 rounded-full text-sm text-center flex items-center justify-center gap-2 ${success
+                                    ? "bg-green-500/20 border-green-500/50 text-green-200"
+                                    : "bg-red-500/20 border-red-500/50 text-red-200"
+                                    }`}
                                 style={{ display: error ? "flex" : "none" }}
                             >
                                 <div className="flex-shrink-0">
