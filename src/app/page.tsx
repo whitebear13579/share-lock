@@ -9,7 +9,7 @@ import CustomButton from "@/components/button";
 import CustomInput from "@/components/input";
 import PageTransition from "@/components/pageTransition";
 import { useAuth } from "@/utils/authProvider";
-import { Image } from "@heroui/react";
+import { Avatar } from "@heroui/avatar";
 
 export default function Home() {
     const router = useRouter();
@@ -193,16 +193,21 @@ export default function Home() {
                                         size="lg"
                                         radius="full"
                                         startContent={
-                                            <Image
-                                                alt="使用者頭像"
+                                            <Avatar
                                                 src={
                                                     user.photoURL
-                                                        ? user.photoURL
-                                                        : undefined
+                                                    ? user.photoURL
+                                                    : undefined
                                                 }
-                                                height={30}
-                                                className="rounded-full"
-                                            ></Image>
+                                                name={
+                                                    user.displayName
+                                                    ? user.displayName
+                                                    : undefined
+
+                                                }
+                                                radius="full"
+                                                size="sm"
+                                            />
                                         }
                                         isDisabled={loading}
                                         className="text-base hover:bg-white/20 text-gray-200"
