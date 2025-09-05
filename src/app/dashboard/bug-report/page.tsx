@@ -9,7 +9,7 @@ import CustomButton from "@/components/button";
 import { Image } from "@heroui/react";
 import NextImage from "next/image";
 
-export default function Dashboard() {
+export default function BugReport() {
     const { user, loading, logout } = useAuth();
     const router = useRouter();
 
