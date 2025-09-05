@@ -353,45 +353,69 @@ export default function Dashboard() {
 
                     <Spacer x={6} />
 
-                    <div className="flex-1 flex">
-                        <Card className="flex-1 backdrop-blur-sm bg-gradient-to-tl from-green-500/20 to-emerald-500/20" shadow="lg" isPressable>
-                            <CardHeader className="pb-0 pt-6 px-6 flex-row items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-emerald-500/30 p-4 rounded-xl">
-                                        <CloudUpload size={36} className="text-emerald-400" />
+                    <Card className="flex-1 bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
+                        <CardHeader className="pb-0 pt-6 px-6 flex-row items-center gap-3">
+                            <div className="bg-blue-500/20 p-3 rounded-xl">
+                                <FileText size={24} className="text-blue-400" />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-xl text-white">最近使用的檔案</h4>
+                                <p className="text-gray-300 text-sm">快速存取您最近開啟或分享的檔案</p>
+                            </div>
+                            <Button className="custom-button-trans-override ml-auto bg-white/10 border border-white/30 text-gray-200 shadow-2xl font-medium text-sm" radius="lg" startContent={<ExternalLink size={18} />} >
+                                查看全部
+                            </Button>
+                        </CardHeader>
+                        <CardBody className="px-6 py-4">
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/5 rounded-xl px-4 py-3 hover:bg-white/10 transition-all duration-200 cursor-pointer">
+                                    <div className="bg-red-500/20 p-2 rounded-lg">
+                                        <FileText size={20} className="text-red-400" />
                                     </div>
-                                    <div className="flex flex-col items-start justify-start">
-                                        <h4 className="font-bold text-2xl text-white tracking-wider">上傳檔案</h4>
-                                        <p className="text-gray-300 text-sm">使用 Share Lock 來分享檔案</p>
+                                    <div className="flex min-w-0 flex-col">
+                                        <p className="text-white text-base font-medium truncate">線性代數考古題.pdf</p>
+                                        <p className="text-sm text-gray-400">開啟於 2025/08/31 15:42</p>
                                     </div>
+                                    <div className="justify-self-center">
+                                        <Chip className="text-xs text-gray-300 bg-gray-700/50">
+                                            2.4 MB
+                                        </Chip>
+                                    </div>
+                                    <ArrowUpRight size={18} className="text-gray-400" />
                                 </div>
-                            </CardHeader>
-                            <CardFooter className="gap-2 items-end justify-end mt-auto pr-6 pb-6 text-lg font-medium text-gray-200">
-                                上傳檔案到 Share Lock
-                                <ArrowUpRight size={24} />
-                            </CardFooter>
-                        </Card>
-
-                        <Spacer x={6} />
-
-                        <Card className="flex-1 backdrop-blur-sm bg-gradient-to-tl from-neutral-900/20 to-neutral-400/20" shadow="lg" isPressable>
-                            <CardHeader className="pb-0 pt-6 px-6 flex-row items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-zinc-800/40 p-4 rounded-xl">
-                                        <Github size={36} className="text-gray-200" />
+                                <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/5 rounded-xl px-4 py-3 hover:bg-white/10 transition-all duration-200 cursor-pointer">
+                                    <div className="bg-green-500/20 p-2 rounded-lg">
+                                        <FileText size={20} className="text-green-400" />
                                     </div>
-                                    <div className="flex flex-col items-start justify-start">
-                                        <h4 className="font-bold text-2xl text-white tracking-wider">Github</h4>
-                                        <p className="text-gray-300 text-sm">查看我們的原始碼</p>
+                                    <div className="flex min-w-0 flex-col">
+                                        <p className="text-white text-base font-medium truncate">計算機考試解答.pdf</p>
+                                        <p className="text-sm text-gray-400">分享於 2025/08/29 09:15</p>
                                     </div>
+                                    <div className="justify-self-center">
+                                        <Chip className="text-xs text-gray-300 bg-gray-700/50">
+                                            1.8 MB
+                                        </Chip>
+                                    </div>
+                                    <ArrowUpRight size={18} className="text-gray-400" />
                                 </div>
-                            </CardHeader>
-                            <CardFooter className="gap-2 items-end justify-end mt-auto pr-6 pb-6 text-lg font-medium text-gray-200">
-                                造訪 Github 儲存庫！
-                                <ArrowUpRight size={24} />
-                            </CardFooter>
-                        </Card>
-                    </div>
+                                <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/5 rounded-xl px-4 py-3 hover:bg-white/10 transition-all duration-200 cursor-pointer">
+                                    <div className="bg-purple-500/20 p-2 rounded-lg">
+                                        <FileText size={20} className="text-purple-400" />
+                                    </div>
+                                    <div className="flex min-w-0 flex-col">
+                                        <p className="text-white text-base font-medium truncate">期末簡報.pptx</p>
+                                        <p className="text-sm text-gray-400">修改於 2025/08/28 20:30</p>
+                                    </div>
+                                    <div className="justify-self-center">
+                                        <Chip className="text-xs text-gray-300 bg-gray-700/50">
+                                            15.2 MB
+                                        </Chip>
+                                    </div>
+                                    <ArrowUpRight size={18} className="text-gray-400" />
+                                </div>
+                            </div>
+                        </CardBody>
+                    </Card>
                 </div>
             </div>
         </div>
