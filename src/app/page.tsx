@@ -196,13 +196,13 @@ export default function Home() {
                                             <Avatar
                                                 src={
                                                     user.photoURL
-                                                    ? user.photoURL
-                                                    : undefined
+                                                        ? user.photoURL
+                                                        : "/undefined.png"
                                                 }
                                                 name={
                                                     user.displayName
-                                                    ? user.displayName
-                                                    : undefined
+                                                        ? user.displayName
+                                                        : undefined
 
                                                 }
                                                 radius="full"
