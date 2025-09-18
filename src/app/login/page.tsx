@@ -397,11 +397,7 @@ export default function Login() {
                     <div className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
                         <div
                             ref={formContainerRef}
-                            className="flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide"
-                            style={{
-                                transition:
-                                    "height 0.3s ease-out, min-height 0.3s ease-out",
-                            }}
+                            className="flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide transition-[height,min-height] duration-300 ease-out"
                         >
                             <div className="flex items-center justify-center w-full text-3xl font-bold text-white pb-4">
                                 登入
@@ -409,8 +405,8 @@ export default function Login() {
                             <div
                                 ref={errorBoxRef}
                                 className={`w-full max-w-md p-1.5 border-2 rounded-full text-sm text-center flex items-center justify-center gap-2 ${resetEmailSent
-                                        ? "bg-green-500/20 border-green-500/50 text-green-200"
-                                        : "bg-red-500/20 border-red-500/50 text-red-200"
+                                    ? "bg-green-500/20 border-green-500/50 text-green-200"
+                                    : "bg-red-500/20 border-red-500/50 text-red-200"
                                     }`}
                             >
                                 <div className="flex-shrink-0">
@@ -425,11 +421,7 @@ export default function Login() {
                                 </span>
                             </div>
                             <div
-                                className={`w-full max-w-md flex flex-col items-center ${!emailError && !passwordError ? "space-y-8" : "space-y-6"}`}
-                                style={{
-                                    transition:
-                                        "gap 0.3s ease-out, margin 0.3s ease-out, padding 0.3s ease-out",
-                                }}
+                                className={`w-full max-w-md flex flex-col items-center transition-[gap,margin,padding] duration-300 ease-out ${!emailError && !passwordError ? "space-y-8" : "space-y-6"}`}
                             >
                                 <div className="custom-input-trans-animate w-full origin-center ">
                                     <CustomInput

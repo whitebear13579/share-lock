@@ -396,11 +396,7 @@ export default function Signup() {
                     <div className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
                         <div
                             ref={formContainerRef}
-                            className="max-h-[85vh] flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide"
-                            style={{
-                                transition:
-                                    "height 0.3s ease-out, min-height 0.3s ease-out",
-                            }}
+                            className="max-h-[85vh] flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide transition-[height,min-height] duration-300 ease-out"
                         >
                             <div className="flex items-center justify-center w-full text-3xl font-bold text-white pb-4">
                                 註冊
@@ -417,17 +413,13 @@ export default function Signup() {
                                 </span>
                             </div>
                             <div
-                                className={`w-full max-w-md flex flex-col items-center ${!usernameError &&
-                                        !emailError &&
-                                        !passwordError &&
-                                        !confirmPasswordError
-                                        ? "space-y-3.5"
-                                        : "space-y-1.5"
+                                className={`w-full max-w-md flex flex-col items-center transition-[gap,margin,padding] duration-300 ease-out ${!usernameError &&
+                                    !emailError &&
+                                    !passwordError &&
+                                    !confirmPasswordError
+                                    ? "space-y-3.5"
+                                    : "space-y-1.5"
                                     }`}
-                                style={{
-                                    transition:
-                                        "gap 0.3s ease-out, margin 0.3s ease-out, padding 0.3s ease-out",
-                                }}
                             >
                                 <div className="w-full origin-center custom-input-trans-animate">
                                     <CustomInput
@@ -516,11 +508,11 @@ export default function Signup() {
                                 </div>
                                 <div
                                     className={`flex flex-col items-center justify-center text-xs text-gray-300 ${!usernameError &&
-                                            !emailError &&
-                                            !passwordError &&
-                                            !confirmPasswordError
-                                            ? "pt-2 pb-0"
-                                            : "pt-2 pb-0"
+                                        !emailError &&
+                                        !passwordError &&
+                                        !confirmPasswordError
+                                        ? "pt-2 pb-0"
+                                        : "pt-2 pb-0"
                                         }`}
                                 >
                                     <div className="text-center">
