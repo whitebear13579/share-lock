@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/utils/authProvider";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/button";
-import { Cog, Folder, House, LogOut, Star, User, FileText, Activity, Calendar, Shield, Bell, TrendingUp, Users, Server, Database, ArrowRight, Share2, Check, CircleCheck, CircleCheckBig, Lock, X, ClockFading, LockOpen, ExternalLink, Package, BellRing, Trash, CloudUpload, ArrowUpRight, Github } from "lucide-react";
+import { Cog, Folder, House, LogOut, Star, User, FileText, Activity, Calendar, Shield, Bell, TrendingUp, Users, Server, Database, ArrowRight, Share2, Check, CircleCheck, CircleCheckBig, Lock, X, ClockFading, LockOpen, ExternalLink, Package, BellRing, Trash, CloudUpload, ArrowUpRight, Github, ChartPie } from "lucide-react";
 import { Chip, Progress, Spinner } from "@heroui/react";
 import CustomButton from "@/components/button";
 import { Image } from "@heroui/react";
@@ -14,6 +14,7 @@ import { IoAlertOutline } from "react-icons/io5";
 
 export default function Dashboard() {
     let welcomeString = ["🌅 早安，歡迎回來！", "☀️ 午安，歡迎回來！", "🌇 晚安，近來好嗎？", "🌙 夜深了，好好休息吧！"]
+
     const getWelcomeMessage = () => {
         const currentHour = new Date().getHours();
         if (currentHour >= 5 && currentHour < 12) {
@@ -34,7 +35,9 @@ export default function Dashboard() {
             router.push("/login");
         }
     }, [user, loading, router]);
-
+    // Todo: RWD design
+    // the dashborad page have display problem at width < 1500
+    // the height is a dont care problem
     if (loading) {
         return (
             <div className="min-h-screen bg-neutral-800 flex items-center justify-center">
@@ -110,7 +113,7 @@ export default function Dashboard() {
                             <Image
                                 isZoomed
                                 alt="使用者頭像"
-                                src={user.photoURL ? user.photoURL : undefined}
+                                src={user.photoURL ? user.photoURL : "/undefined.png"}
                                 className="inset-0 z-0 min-w-[200px] h-full object-cover"
                                 removeWrapper
                             />
@@ -218,7 +221,7 @@ export default function Dashboard() {
                     <Card className="flex-1 bg-white/10 backdrop-blur-sm border-white/20 min-w-[458px] max-w-[600px]" shadow="lg">
                         <CardHeader className="pb-0 pt-6 px-6 flex-row items-center gap-3">
                             <div className="bg-purple-500/20 p-3 rounded-xl">
-                                <Package size={24} className="text-purple-400" />
+                                <ChartPie size={24} className="text-purple-400" />
                             </div>
                             <div>
                                 <h4 className="font-bold text-xl text-white">使用狀況</h4>
@@ -353,7 +356,7 @@ export default function Dashboard() {
 
                     <Spacer x={6} />
 
-                    <Card className="flex-1 bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
+                    <Card className="flex-1 bg-white/10 backdrop-blur-sm border-white/20 h-80" shadow="lg">
                         <CardHeader className="pb-0 pt-6 px-6 flex-row items-center gap-3">
                             <div className="bg-blue-500/20 p-3 rounded-xl">
                                 <FileText size={24} className="text-blue-400" />
@@ -362,19 +365,16 @@ export default function Dashboard() {
                                 <h4 className="font-bold text-xl text-white">最近使用的檔案</h4>
                                 <p className="text-gray-300 text-sm">快速存取您最近開啟或分享的檔案</p>
                             </div>
-                            <Button className="custom-button-trans-override ml-auto bg-white/10 border border-white/30 text-gray-200 shadow-2xl font-medium text-sm" radius="lg" startContent={<ExternalLink size={18} />} >
-                                查看全部
-                            </Button>
                         </CardHeader>
-                        <CardBody className="px-6 py-4">
+                        <CardBody className="px-6 py-4 flex-1 overflow-auto">
                             <div className="space-y-3">
-                                <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/5 rounded-xl px-4 py-3 hover:bg-white/10 transition-all duration-200 cursor-pointer">
+                                <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3 hover:bg-white/15 transition-all duration-200 cursor-pointer">
                                     <div className="bg-red-500/20 p-2 rounded-lg">
                                         <FileText size={20} className="text-red-400" />
                                     </div>
                                     <div className="flex min-w-0 flex-col">
                                         <p className="text-white text-base font-medium truncate">線性代數考古題.pdf</p>
-                                        <p className="text-sm text-gray-400">開啟於 2025/08/31 15:42</p>
+                                        <p className="text-xs text-gray-400">上次使用是在 2025/08/31 15:42</p>
                                     </div>
                                     <div className="justify-self-center">
                                         <Chip className="text-xs text-gray-300 bg-gray-700/50">
@@ -383,13 +383,13 @@ export default function Dashboard() {
                                     </div>
                                     <ArrowUpRight size={18} className="text-gray-400" />
                                 </div>
-                                <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/5 rounded-xl px-4 py-3 hover:bg-white/10 transition-all duration-200 cursor-pointer">
+                                <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3 hover:bg-white/15 transition-all duration-200 cursor-pointer">
                                     <div className="bg-green-500/20 p-2 rounded-lg">
                                         <FileText size={20} className="text-green-400" />
                                     </div>
                                     <div className="flex min-w-0 flex-col">
-                                        <p className="text-white text-base font-medium truncate">計算機考試解答.pdf</p>
-                                        <p className="text-sm text-gray-400">分享於 2025/08/29 09:15</p>
+                                        <p className="text-white text-base font-medium truncate">計算機概論小考解答.pdf</p>
+                                        <p className="text-xs text-gray-400">上次使用是在 2025/08/29 09:15</p>
                                     </div>
                                     <div className="justify-self-center">
                                         <Chip className="text-xs text-gray-300 bg-gray-700/50">
@@ -398,13 +398,13 @@ export default function Dashboard() {
                                     </div>
                                     <ArrowUpRight size={18} className="text-gray-400" />
                                 </div>
-                                <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/5 rounded-xl px-4 py-3 hover:bg-white/10 transition-all duration-200 cursor-pointer">
+                                <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3 hover:bg-white/15 transition-all duration-200 cursor-pointer">
                                     <div className="bg-purple-500/20 p-2 rounded-lg">
                                         <FileText size={20} className="text-purple-400" />
                                     </div>
                                     <div className="flex min-w-0 flex-col">
                                         <p className="text-white text-base font-medium truncate">期末簡報.pptx</p>
-                                        <p className="text-sm text-gray-400">修改於 2025/08/28 20:30</p>
+                                        <p className="text-xs text-gray-400">上次使用是在 2025/08/28 20:30</p>
                                     </div>
                                     <div className="justify-self-center">
                                         <Chip className="text-xs text-gray-300 bg-gray-700/50">
