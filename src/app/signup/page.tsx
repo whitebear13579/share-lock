@@ -200,34 +200,61 @@ export default function Signup() {
     const animateErrorBox = () => {
         if (!errorBoxRef.current || !formContainerRef.current) return;
 
-        gsap.set(errorBoxRef.current, {
-            scale: 0.8,
-            opacity: 0,
-            height: 0,
-            marginBottom: 0,
-        });
+        const currentOpacity = gsap.getProperty(errorBoxRef.current, "opacity") as number;
+        const isCurrentlyVisible = currentOpacity > 0;
 
-        const tl = gsap.timeline();
+        if (isCurrentlyVisible) {
+            gsap.killTweensOf(errorBoxRef.current);
 
-        tl.to(errorBoxRef.current, {
-            height: "auto",
-            marginBottom: "0.5rem",
-            duration: 0.2,
-            ease: "power2.out",
-        }).to(
-            errorBoxRef.current,
-            {
+            const tl = gsap.timeline();
+            tl.to(errorBoxRef.current, {
+                scale: 0.8,
+                duration: 0.1,
+                ease: "power2.in",
+            }).to(errorBoxRef.current, {
+                scale: 1.1,
+                duration: 0.2,
+                ease: "power2.out",
+            }).to(errorBoxRef.current, {
                 scale: 1,
-                opacity: 1,
                 duration: 0.3,
-                ease: "back.out(1.4)",
-            },
-            "-=0.1"
-        );
+                ease: "back.out(1.7)",
+            });
+        } else {
+            gsap.killTweensOf(errorBoxRef.current);
+
+            gsap.set(errorBoxRef.current, {
+                scale: 0.8,
+                opacity: 0,
+                height: 0,
+                marginBottom: 0,
+                display: "flex",
+            });
+
+            const tl = gsap.timeline();
+
+            tl.to(errorBoxRef.current, {
+                height: "auto",
+                marginBottom: "0.5rem",
+                duration: 0.2,
+                ease: "power2.out",
+            }).to(
+                errorBoxRef.current,
+                {
+                    scale: 1,
+                    opacity: 1,
+                    duration: 0.3,
+                    ease: "back.out(1.4)",
+                },
+                "-=0.1"
+            );
+        }
     };
 
     const hideErrorBox = () => {
         if (!errorBoxRef.current) return;
+
+        gsap.killTweensOf(errorBoxRef.current);
 
         const tl = gsap.timeline();
 
@@ -243,6 +270,11 @@ export default function Signup() {
                 marginBottom: 0,
                 duration: 0.2,
                 ease: "power2.in",
+                onComplete: () => {
+                    if (errorBoxRef.current) {
+                        gsap.set(errorBoxRef.current, { display: "none" });
+                    }
+                }
             },
             "-=0.1"
         );
@@ -262,6 +294,15 @@ export default function Signup() {
             duration: 0.4,
             ease: "back.out(1.2)",
         });
+
+        if (errorBoxRef.current) {
+            gsap.set(errorBoxRef.current, {
+                opacity: 0,
+                height: 0,
+                marginBottom: 0,
+                display: "none",
+            });
+        }
     }, []);
 
     useEffect(() => {
@@ -366,8 +407,7 @@ export default function Signup() {
                             </div>
                             <div
                                 ref={errorBoxRef}
-                                className="w-full max-w-md p-1.5 bg-red-500/20 border-2 border-red-500/60 rounded-full text-red-400 text-sm text-center flex items-center justify-center gap-2"
-                                style={{ display: error ? "flex" : "none" }}
+                                className="w-full max-w-md p-1.5 bg-red-500/20 border-2 border-red-500/50 rounded-full text-red-200 text-sm text-center flex items-center justify-center gap-2"
                             >
                                 <div className="flex-shrink-0">
                                     <CircleAlert size={18} />
@@ -377,14 +417,13 @@ export default function Signup() {
                                 </span>
                             </div>
                             <div
-                                className={`w-full max-w-md flex flex-col items-center ${
-                                    !usernameError &&
-                                    !emailError &&
-                                    !passwordError &&
-                                    !confirmPasswordError
+                                className={`w-full max-w-md flex flex-col items-center ${!usernameError &&
+                                        !emailError &&
+                                        !passwordError &&
+                                        !confirmPasswordError
                                         ? "space-y-3.5"
                                         : "space-y-1.5"
-                                }`}
+                                    }`}
                                 style={{
                                     transition:
                                         "gap 0.3s ease-out, margin 0.3s ease-out, padding 0.3s ease-out",
@@ -476,14 +515,13 @@ export default function Signup() {
                                     </Button>
                                 </div>
                                 <div
-                                    className={`flex flex-col items-center justify-center text-xs text-gray-300 ${
-                                        !usernameError &&
-                                        !emailError &&
-                                        !passwordError &&
-                                        !confirmPasswordError
+                                    className={`flex flex-col items-center justify-center text-xs text-gray-300 ${!usernameError &&
+                                            !emailError &&
+                                            !passwordError &&
+                                            !confirmPasswordError
                                             ? "pt-2 pb-0"
                                             : "pt-2 pb-0"
-                                    }`}
+                                        }`}
                                 >
                                     <div className="text-center">
                                         註冊即代表您同意&nbsp;

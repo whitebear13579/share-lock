@@ -207,34 +207,61 @@ export default function Login() {
     const animateErrorBox = () => {
         if (!errorBoxRef.current || !formContainerRef.current) return;
 
-        gsap.set(errorBoxRef.current, {
-            scale: 0.8,
-            opacity: 0,
-            height: 0,
-            marginBottom: 0,
-        });
+        const currentOpacity = gsap.getProperty(errorBoxRef.current, "opacity") as number;
+        const isCurrentlyVisible = currentOpacity > 0;
 
-        const tl = gsap.timeline();
+        if (isCurrentlyVisible) {
+            gsap.killTweensOf(errorBoxRef.current);
 
-        tl.to(errorBoxRef.current, {
-            height: "auto",
-            marginBottom: "0.5rem",
-            duration: 0.2,
-            ease: "power2.out",
-        }).to(
-            errorBoxRef.current,
-            {
+            const tl = gsap.timeline();
+            tl.to(errorBoxRef.current, {
+                scale: 0.8,
+                duration: 0.1,
+                ease: "power2.in",
+            }).to(errorBoxRef.current, {
+                scale: 1.1,
+                duration: 0.2,
+                ease: "power2.out",
+            }).to(errorBoxRef.current, {
                 scale: 1,
-                opacity: 1,
                 duration: 0.3,
-                ease: "back.out(1.4)",
-            },
-            "-=0.1"
-        );
+                ease: "back.out(1.7)",
+            });
+        } else {
+            gsap.killTweensOf(errorBoxRef.current);
+
+            gsap.set(errorBoxRef.current, {
+                scale: 0.8,
+                opacity: 0,
+                height: 0,
+                marginBottom: 0,
+                display: "flex",
+            });
+
+            const tl = gsap.timeline();
+
+            tl.to(errorBoxRef.current, {
+                height: "auto",
+                marginBottom: "0.5rem",
+                duration: 0.2,
+                ease: "power2.out",
+            }).to(
+                errorBoxRef.current,
+                {
+                    scale: 1,
+                    opacity: 1,
+                    duration: 0.3,
+                    ease: "back.out(1.4)",
+                },
+                "-=0.1"
+            );
+        }
     };
 
     const hideErrorBox = () => {
         if (!errorBoxRef.current) return;
+
+        gsap.killTweensOf(errorBoxRef.current);
 
         const tl = gsap.timeline();
 
@@ -250,6 +277,11 @@ export default function Login() {
                 marginBottom: 0,
                 duration: 0.2,
                 ease: "power2.in",
+                onComplete: () => {
+                    if (errorBoxRef.current) {
+                        gsap.set(errorBoxRef.current, { display: "none" });
+                    }
+                }
             },
             "-=0.1"
         );
@@ -269,6 +301,15 @@ export default function Login() {
             duration: 0.4,
             ease: "back.out(1.2)",
         });
+
+        if (errorBoxRef.current) {
+            gsap.set(errorBoxRef.current, {
+                opacity: 0,
+                height: 0,
+                marginBottom: 0,
+                display: "none",
+            });
+        }
     }, []);
 
     useEffect(() => {
@@ -367,12 +408,10 @@ export default function Login() {
                             </div>
                             <div
                                 ref={errorBoxRef}
-                                className={`w-full max-w-md p-1.5 border-2 rounded-full text-sm text-center flex items-center justify-center gap-2 ${
-                                    resetEmailSent
+                                className={`w-full max-w-md p-1.5 border-2 rounded-full text-sm text-center flex items-center justify-center gap-2 ${resetEmailSent
                                         ? "bg-green-500/20 border-green-500/50 text-green-200"
                                         : "bg-red-500/20 border-red-500/50 text-red-200"
-                                }`}
-                                style={{ display: error ? "flex" : "none" }}
+                                    }`}
                             >
                                 <div className="flex-shrink-0">
                                     {resetEmailSent ? (
