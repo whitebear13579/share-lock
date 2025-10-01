@@ -4,7 +4,7 @@ import { useAuth } from "@/utils/authProvider";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/button";
 import { Cog, Folder, House, LogOut, Star, FileText, ArrowRight, Share2, Check, Lock, X, ClockFading, LockOpen, ExternalLink, BellRing, Trash, ArrowUpRight, ChartPie, MessageCircleQuestionMark } from "lucide-react";
-import { Chip, Progress, Spinner, Navbar, NavbarBrand, NavbarContent, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, DropdownSection, Link } from "@heroui/react";
+import { Chip, Progress, Spinner, Navbar, NavbarBrand, NavbarContent, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, ScrollShadow, Link } from "@heroui/react";
 import CustomButton from "@/components/button";
 import { Image } from "@heroui/react";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
@@ -50,9 +50,10 @@ export default function Dashboard() {
             router.push("/login");
         }
     }, [user, loading, router]);
+    
     if (loading) {
         return (
-            <div className="min-h-screen bg-neutral-800 flex items-center justify-center">
+            <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55% flex items-center justify-center">
                 <Spinner
                     classNames={{ label: "text-xl text-white" }}
                     variant="dots"
@@ -550,233 +551,231 @@ export default function Dashboard() {
 
                 {/* mobile device layout */}
                 {isMobile && (
-                    <div className="space-y-6">
-                        <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
-                            <CardHeader className="pb-2 pt-4 px-4 flex-row items-center gap-3">
-                                <div className="bg-blue-600/30 p-2 rounded-xl">
-                                    <Share2 size={20} className="text-blue-400" />
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-lg text-white">檔案分享</h4>
-                                    <p className="text-gray-300 text-xs">看看有沒有人要分享檔案給你？</p>
-                                </div>
-                                <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
-                                    查看更多
-                                </Button>
-                            </CardHeader>
-                            <CardBody className="px-4 py-3">
-                                <div className="space-y-3">
-                                    <div className="grid grid-cols-[auto_3fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2">
-                                        <Avatar src="https://i.pravatar.cc/40?u=user1" size="sm" />
-                                        <div className="flex min-w-0 flex-col">
-                                            <p className="text-white text-sm font-medium truncate">Anna 想分享 "線性代數考古題"</p>
-                                            <p className="text-xs text-gray-400 flex gap-1 items-center">
-                                                <IoAlertOutline size={12} className="rounded-full bg-amber-500 p-0.5 text-zinc-900" />
-                                                即將失效：2025 / 08 / 31
-                                            </p>
+                        <div className="space-y-6">
+                            <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
+                                <CardHeader className="pb-2 pt-4 px-4 flex-row items-center gap-3">
+                                    <div className="bg-blue-600/30 p-2 rounded-xl">
+                                        <Share2 size={20} className="text-blue-400" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-lg text-white">檔案分享</h4>
+                                        <p className="text-gray-300 text-xs">看看有沒有人要分享檔案給你？</p>
+                                    </div>
+                                    <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
+                                        查看更多
+                                    </Button>
+                                </CardHeader>
+                                <CardBody className="px-4 py-3">
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-[auto_3fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2">
+                                            <Avatar src="https://i.pravatar.cc/40?u=user1" size="sm" />
+                                            <div className="flex min-w-0 flex-col">
+                                                <p className="text-white text-sm font-medium truncate">Anna 想分享 "線性代數考古題"</p>
+                                                <p className="text-xs text-gray-400 flex gap-1 items-center">
+                                                    <IoAlertOutline size={12} className="rounded-full bg-amber-500 p-0.5 text-zinc-900" />
+                                                    即將失效：2025 / 08 / 31
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-emerald-600 text-white h-8 w-8 p-0">
+                                                    <Check size={16} />
+                                                </Button>
+                                                <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-rose-500 text-white h-8 w-8">
+                                                    <X size={16} />
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-emerald-600 text-white h-8 w-8 p-0">
-                                                <Check size={16} />
+                                        <div className="grid grid-cols-[auto_3fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2">
+                                            <Avatar src="https://i.pravatar.cc/40?u=user2" size="sm" />
+                                            <div className="flex min-w-0 flex-col">
+                                                <p className="text-white text-sm font-medium truncate">Wendy 想分享 "計...答.pdf"</p>
+                                                <p className="text-xs text-gray-400 flex gap-1 items-center">
+                                                    <Check size={12} className="rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
+                                                    2026 / 09 / 27 前有效
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-emerald-600 text-white h-8 w-8 p-0">
+                                                    <Check size={16} />
+                                                </Button>
+                                                <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-rose-500 text-white h-8 w-8 p-0">
+                                                    <X size={16} />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardBody>
+                            </Card>
+
+                            <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
+                                <CardHeader className="pb-0 pt-4 px-4 flex-row items-center gap-3">
+                                    <div className="bg-purple-500/20 p-2 rounded-xl">
+                                        <ChartPie size={20} className="text-purple-400" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-lg text-white">使用狀況</h4>
+                                        <p className="text-gray-300 text-xs">查看你的帳號使用狀況</p>
+                                    </div>
+                                    <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
+                                        瞭解詳情
+                                    </Button>
+                                </CardHeader>
+                                <CardBody className="px-6 py-6">
+                                    <div className="flex items-center gap-2 text-sm text-gray-200 font-medium pb-3">
+                                        {true ? (
+                                            <>
+                                                <IoAlertOutline size={24} className="shrink-0 rounded-full bg-amber-500 p-0.5 text-zinc-900" />
+                                                <span className="leading-none">需要注意：可用空間不足 15%</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Check size={24} className="shrink-0 rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
+                                                <span className="leading-none">一切正常：可用空間還剩 23%</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <Progress
+                                        size="md"
+                                        radius="full"
+                                        showValueLabel
+                                        classNames={{
+                                            indicator: (true
+                                                ? "bg-linear-245 from-amber-500 to-rose-700"
+                                                : "bg-linear-245 from-cyan-500 to-sky-600"
+                                            ),
+                                            track: "drop-shadow-lg border border-white/30 bg-gray-900/10",
+                                            value: "text-lg font-medium text-gray-200",
+                                            label: "text-gray-300 font-normal text-sm"
+                                        }}
+                                        label="882 MB / 1 GB"
+                                        value={86}
+                                    />
+                                </CardBody>
+                            </Card>
+
+                            <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
+                                <CardHeader className="pb-0 pt-4 px-4 flex-row items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-yellow-500/20 p-2 rounded-xl">
+                                            <BellRing size={20} className="text-yellow-400" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-lg text-white">通知中心</h4>
+                                            <p className="text-gray-300 text-xs">重要訊息通知</p>
+                                        </div>
+                                    </div>
+                                    <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
+                                        查看全部
+                                    </Button>
+                                </CardHeader>
+                                <CardBody className="px-4 py-3">
+                                    <div className="space-y-2">
+                                        <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-2 bg-white/10 rounded-2xl shadow-xl px-3 py-2">
+                                            <div className="rounded-lg bg-orange-500/25 text-orange-400 p-1 h-8 w-8 flex items-center justify-center">
+                                                <ClockFading size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-200 font-medium">檔案即將過期</p>
+                                                <p className="text-xs text-gray-400">2 小時前</p>
+                                            </div>
+                                            <Divider orientation="vertical" className="bg-white/40 h-6 w-0.5 rounded-full mx-1" />
+                                            <div className="text-gray-300 text-xs">
+                                                檔案 &ldquo;在學證明.pdf&rdquo; 即將過期。
+                                            </div>
+                                            <Button size="sm" isIconOnly radius="full" className="custom-button-trans-override bg-zinc-400/40 shadow-xl h-8 w-8 p-0 group">
+                                                <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
                                             </Button>
-                                            <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-rose-500 text-white h-8 w-8">
+                                        </div>
+                                        <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-2 bg-white/10 rounded-2xl shadow-xl px-3 py-2">
+                                            <div className="rounded-lg bg-red-500/25 text-red-400 p-1 h-8 w-8 flex items-center justify-center">
                                                 <X size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-200 font-medium">Harry 已婉拒</p>
+                                                <p className="text-xs text-gray-400">5 小時前</p>
+                                            </div>
+                                            <Divider orientation="vertical" className="bg-white/40 h-6 w-0.5 rounded-full mx-1" />
+                                            <div className="text-gray-300 text-xs">
+                                                Harry 婉拒了 &ldquo;期末簡報.pptx&rdquo;
+                                            </div>
+                                            <Button size="sm" isIconOnly radius="full" className="custom-button-trans-override bg-zinc-400/40 shadow-xl h-8 w-8 p-0 group">
+                                                <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
+                                            </Button>
+                                        </div>
+                                        <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-2 bg-white/10 rounded-2xl shadow-xl px-3 py-2">
+                                            <div className="rounded-lg bg-emerald-500/25 text-emerald-400 p-1 h-8 w-8 flex items-center justify-center">
+                                                <Check size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-200 font-medium">Miya 已收到</p>
+                                                <p className="text-xs text-gray-400">2025 / 07 / 31</p>
+                                            </div>
+                                            <Divider orientation="vertical" className="bg-white/40 h-6 w-0.5 rounded-full mx-1" />
+                                            <div className="text-gray-300 text-xs">
+                                                Miya 收到了 &ldquo;ヨルシカ 盗作.flac&rdquo;
+                                            </div>
+                                            <Button size="sm" isIconOnly radius="full" className="custom-button-trans-override bg-zinc-400/40 shadow-xl h-8 w-8 p-0 group">
+                                                <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
                                             </Button>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-[auto_3fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2">
-                                        <Avatar src="https://i.pravatar.cc/40?u=user2" size="sm" />
-                                        <div className="flex min-w-0 flex-col">
-                                            <p className="text-white text-sm font-medium truncate">Wendy 想分享 "計...答.pdf"</p>
-                                            <p className="text-xs text-gray-400 flex gap-1 items-center">
-                                                <Check size={12} className="rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
-                                                2026 / 09 / 27 前有效
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-emerald-600 text-white h-8 w-8 p-0">
-                                                <Check size={16} />
-                                            </Button>
-                                            <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-rose-500 text-white h-8 w-8 p-0">
-                                                <X size={16} />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-
-                        <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
-                            <CardHeader className="pb-0 pt-4 px-4 flex-row items-center gap-3">
-                                <div className="bg-purple-500/20 p-2 rounded-xl">
-                                    <ChartPie size={20} className="text-purple-400" />
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-lg text-white">使用狀況</h4>
-                                    <p className="text-gray-300 text-xs">查看你的帳號使用狀況</p>
-                                </div>
-                                <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
-                                    瞭解詳情
-                                </Button>
-                            </CardHeader>
-                            <CardBody className="px-6 py-6">
-                                <div className="flex items-center gap-2 text-sm text-gray-200 font-medium pb-3">
-                                    {true ? (
-                                        <>
-                                            <IoAlertOutline size={24} className="shrink-0 rounded-full bg-amber-500 p-0.5 text-zinc-900" />
-                                            <span className="leading-none">需要注意：可用空間不足 15%</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Check size={24} className="shrink-0 rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
-                                            <span className="leading-none">一切正常：可用空間還剩 23%</span>
-                                        </>
-                                    )}
-                                </div>
-                                <Progress
-                                    size="md"
-                                    radius="full"
-                                    showValueLabel
-                                    classNames={{
-                                        indicator: (true
-                                            ? "bg-linear-245 from-amber-500 to-rose-700"
-                                            : "bg-linear-245 from-cyan-500 to-sky-600"
-                                        ),
-                                        track: "drop-shadow-lg border border-white/30 bg-gray-900/10",
-                                        value: "text-lg font-medium text-gray-200",
-                                        label: "text-gray-300 font-normal text-sm"
-                                    }}
-                                    label="882 MB / 1 GB"
-                                    value={86}
-                                />
-                            </CardBody>
-                        </Card>
-
-                        <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
-                            <CardHeader className="pb-0 pt-4 px-4 flex-row items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-yellow-500/20 p-2 rounded-xl">
-                                        <BellRing size={20} className="text-yellow-400" />
+                                </CardBody>
+                            </Card>
+                            <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
+                                <CardHeader className="pb-0 pt-4 px-4 flex-row items-center gap-3">
+                                    <div className="bg-blue-500/20 p-2 rounded-xl">
+                                        <FileText size={20} className="text-blue-400" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-lg text-white">通知中心</h4>
-                                        <p className="text-gray-300 text-xs">重要訊息通知</p>
+                                        <h4 className="font-bold text-lg text-white">最近使用的檔案</h4>
+                                        <p className="text-gray-300 text-xs">快速存取您最近開啟或分享的檔案</p>
                                     </div>
-                                </div>
-                                <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
-                                    查看全部
-                                </Button>
-                            </CardHeader>
-                            <CardBody className="px-4 py-3">
-                                <div className="space-y-2">
-                                    <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-2 bg-white/10 rounded-2xl shadow-xl px-3 py-2">
-                                        <div className="rounded-lg bg-orange-500/25 text-orange-400 p-1 h-8 w-8 flex items-center justify-center">
-                                            <ClockFading size={16} />
+                                </CardHeader>
+                                <CardBody className="px-4 py-3">
+                                    <div className="space-y-2">
+                                        <div className="grid grid-cols-[auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 hover:bg-white/15 transition-all cursor-pointer">
+                                            <div className="bg-red-500/20 p-1.5 rounded-lg">
+                                                <FileText size={16} className="text-red-400" />
+                                            </div>
+                                            <div className="flex min-w-0 flex-col">
+                                                <p className="text-white text-sm font-medium truncate">線性代數考古題.pdf</p>
+                                                <p className="text-xs text-gray-400">2025/08/31 15:42</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Chip className="text-xs text-gray-300 bg-gray-700/50 h-5 px-2">2.4MB</Chip>
+                                                <ArrowUpRight size={14} className="text-gray-400" />
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-sm text-gray-200 font-medium">檔案即將過期</p>
-                                            <p className="text-xs text-gray-400">2 小時前</p>
+                                        <div className="grid grid-cols-[auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 hover:bg-white/15 transition-all cursor-pointer">
+                                            <div className="bg-green-500/20 p-1.5 rounded-lg">
+                                                <FileText size={16} className="text-green-400" />
+                                            </div>
+                                            <div className="flex min-w-0 flex-col">
+                                                <p className="text-white text-sm font-medium truncate">計算機概論小考解答.pdf</p>
+                                                <p className="text-xs text-gray-400">2025/08/29 09:15</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Chip className="text-xs text-gray-300 bg-gray-700/50 h-5 px-2">1.8MB</Chip>
+                                                <ArrowUpRight size={14} className="text-gray-400" />
+                                            </div>
                                         </div>
-                                        <Divider orientation="vertical" className="bg-white/40 h-6 w-0.5 rounded-full mx-1" />
-                                        <div className="text-gray-300 text-xs">
-                                            檔案 &ldquo;在學證明.pdf&rdquo; 即將過期。
-                                        </div>
-                                        <Button size="sm" isIconOnly radius="full" className="custom-button-trans-override bg-zinc-400/40 shadow-xl h-8 w-8 p-0 group">
-                                            <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
-                                        </Button>
-                                    </div>
-                                    <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-2 bg-white/10 rounded-2xl shadow-xl px-3 py-2">
-                                        <div className="rounded-lg bg-red-500/25 text-red-400 p-1 h-8 w-8 flex items-center justify-center">
-                                            <X size={16} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-200 font-medium">Harry 已婉拒</p>
-                                            <p className="text-xs text-gray-400">5 小時前</p>
-                                        </div>
-                                        <Divider orientation="vertical" className="bg-white/40 h-6 w-0.5 rounded-full mx-1" />
-                                        <div className="text-gray-300 text-xs">
-                                            Harry 婉拒了 &ldquo;期末簡報.pptx&rdquo;
-                                        </div>
-                                        <Button size="sm" isIconOnly radius="full" className="custom-button-trans-override bg-zinc-400/40 shadow-xl h-8 w-8 p-0 group">
-                                            <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
-                                        </Button>
-                                    </div>
-                                    <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-2 bg-white/10 rounded-2xl shadow-xl px-3 py-2">
-                                        <div className="rounded-lg bg-emerald-500/25 text-emerald-400 p-1 h-8 w-8 flex items-center justify-center">
-                                            <Check size={16} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-200 font-medium">Miya 已收到</p>
-                                            <p className="text-xs text-gray-400">2025 / 07 / 31</p>
-                                        </div>
-                                        <Divider orientation="vertical" className="bg-white/40 h-6 w-0.5 rounded-full mx-1" />
-                                        <div className="text-gray-300 text-xs">
-                                            Miya 收到了 &ldquo;ヨルシカ 盗作.flac&rdquo;
-                                        </div>
-                                        <Button size="sm" isIconOnly radius="full" className="custom-button-trans-override bg-zinc-400/40 shadow-xl h-8 w-8 p-0 group">
-                                            <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-
-                        {/* 最近使用的檔案卡片 */}
-                        <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
-                            <CardHeader className="pb-0 pt-4 px-4 flex-row items-center gap-3">
-                                <div className="bg-blue-500/20 p-2 rounded-xl">
-                                    <FileText size={20} className="text-blue-400" />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-lg text-white">最近使用的檔案</h4>
-                                    <p className="text-gray-300 text-xs">快速存取您最近開啟或分享的檔案</p>
-                                </div>
-                            </CardHeader>
-                            <CardBody className="px-4 py-3">
-                                <div className="space-y-2">
-                                    <div className="grid grid-cols-[auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 hover:bg-white/15 transition-all cursor-pointer">
-                                        <div className="bg-red-500/20 p-1.5 rounded-lg">
-                                            <FileText size={16} className="text-red-400" />
-                                        </div>
-                                        <div className="flex min-w-0 flex-col">
-                                            <p className="text-white text-sm font-medium truncate">線性代數考古題.pdf</p>
-                                            <p className="text-xs text-gray-400">2025/08/31 15:42</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Chip className="text-xs text-gray-300 bg-gray-700/50 h-5 px-2">2.4MB</Chip>
-                                            <ArrowUpRight size={14} className="text-gray-400" />
+                                        <div className="grid grid-cols-[auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 hover:bg-white/15 transition-all cursor-pointer">
+                                            <div className="bg-purple-500/20 p-1.5 rounded-lg">
+                                                <FileText size={16} className="text-purple-400" />
+                                            </div>
+                                            <div className="flex min-w-0 flex-col">
+                                                <p className="text-white text-sm font-medium truncate">期末簡報.pptx</p>
+                                                <p className="text-xs text-gray-400">2025/08/28 20:30</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Chip className="text-xs text-gray-300 bg-gray-700/50 h-5 px-2">15.2MB</Chip>
+                                                <ArrowUpRight size={14} className="text-gray-400" />
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-[auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 hover:bg-white/15 transition-all cursor-pointer">
-                                        <div className="bg-green-500/20 p-1.5 rounded-lg">
-                                            <FileText size={16} className="text-green-400" />
-                                        </div>
-                                        <div className="flex min-w-0 flex-col">
-                                            <p className="text-white text-sm font-medium truncate">計算機概論小考解答.pdf</p>
-                                            <p className="text-xs text-gray-400">2025/08/29 09:15</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Chip className="text-xs text-gray-300 bg-gray-700/50 h-5 px-2">1.8MB</Chip>
-                                            <ArrowUpRight size={14} className="text-gray-400" />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-[auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 hover:bg-white/15 transition-all cursor-pointer">
-                                        <div className="bg-purple-500/20 p-1.5 rounded-lg">
-                                            <FileText size={16} className="text-purple-400" />
-                                        </div>
-                                        <div className="flex min-w-0 flex-col">
-                                            <p className="text-white text-sm font-medium truncate">期末簡報.pptx</p>
-                                            <p className="text-xs text-gray-400">2025/08/28 20:30</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Chip className="text-xs text-gray-300 bg-gray-700/50 h-5 px-2">15.2MB</Chip>
-                                            <ArrowUpRight size={14} className="text-gray-400" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-                    </div>
+                                </CardBody>
+                            </Card>
+                        </div>
                 )}
             </div>
         </div>

@@ -21,7 +21,7 @@ export default function Settings() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-neutral-800 flex items-center justify-center">
+            <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55% flex items-center justify-center">
                 <Spinner
                     classNames={{ label: "text-xl text-white" }}
                     variant="dots"
@@ -36,6 +36,8 @@ export default function Settings() {
     if (!user) {
         return null;
     }
+
+    // i have no idea how to implement settings page style help me QAQ
 
     return (
         <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55%">
