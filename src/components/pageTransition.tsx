@@ -38,7 +38,7 @@ export default function pageTransition({ children }: pageTransitionProps) {
     }, [pathname]);
 
     return (
-        <div ref={containerRef} style={{ opacity: 0 }} className="min-h-screen">
+        <div ref={containerRef} className="min-h-screen opacity-0">
             {children}
         </div>
     );
