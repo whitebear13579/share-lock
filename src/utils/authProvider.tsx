@@ -3,17 +3,20 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/utils/firebase";
 import { useRouter } from "next/navigation";
+import { recordLogin } from "@/utils/loginHistory";
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
     logout: () => Promise<void>;
+    recordUserLogin: (success: boolean, provider?: string, errorMessage?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
-    logout: async () => {},
+    logout: async () => { },
+    recordUserLogin: async () => { },
 });
 
 export const useAuth = () => {
@@ -30,7 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setUser(user);
             setLoading(false);
         });
@@ -47,10 +50,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    const recordUserLogin = async (
+        success: boolean,
+        provider?: string,
+        errorMessage?: string
+    ) => {
+        if (user) {
+            await recordLogin(user, success, provider, errorMessage);
+        }
+    };
+
     const value = {
         user,
         loading,
         logout,
+        recordUserLogin,
     };
 
     return (
