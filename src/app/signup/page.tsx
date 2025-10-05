@@ -22,6 +22,7 @@ import {
 } from "firebase/auth";
 import CryptoJS from "crypto-js";
 import { Spinner } from "@heroui/react";
+import { recordLogin } from "@/utils/loginHistory";
 
 export default function Signup() {
     const router = useRouter();
@@ -90,7 +91,6 @@ export default function Signup() {
         return isValid;
     };
 
-    // regular register
     const handleEmailSignup = async () => {
         if (!validateForm()) return;
 
@@ -109,6 +109,8 @@ export default function Signup() {
                 displayName: username,
                 photoURL: `https://www.gravatar.com/avatar/${hashedEmail}`,
             });
+
+            await recordLogin(userCredential.user, true, "email");
 
             router.push("/dashboard");
         } catch (error: any) {
@@ -142,6 +144,9 @@ export default function Signup() {
         try {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
+
+            await recordLogin(result.user, true, "google");
+
             router.push("/dashboard");
         } catch (error: any) {
             console.error("Google register FAILED!!!:", error);
@@ -173,6 +178,9 @@ export default function Signup() {
         try {
             const provider = new GithubAuthProvider();
             const result = await signInWithPopup(auth, provider);
+
+            await recordLogin(result.user, true, "github");
+
             router.push("/dashboard");
         } catch (error: any) {
             console.error("GitHub register FAILED!!!:", error);

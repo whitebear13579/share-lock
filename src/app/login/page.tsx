@@ -28,10 +28,13 @@ import {
     sendPasswordResetEmail,
 } from "firebase/auth";
 import { Spinner } from "@heroui/react";
+import { useAuth } from "@/utils/authProvider";
+import { recordLogin } from "@/utils/loginHistory";
 
 export default function Login() {
     const [isVisible, setIsVisible] = React.useState(false);
     const router = useRouter();
+    const { recordUserLogin } = useAuth();
 
     const [email, setEmail] = React.useState("");
     const [password, setPassword] = React.useState("");
@@ -78,10 +81,24 @@ export default function Login() {
                 email,
                 password
             );
+
+            try {
+                await recordLogin(userCredential.user, true, 'email');
+            } catch (logError) {
+                console.error("Failed to record successful login:", logError);
+            }
+
             router.push("/dashboard");
         } catch (error: any) {
             console.error("Login FAILED!!!:", error);
             setResetEmailSent(false);
+
+            try {
+                await recordLogin(null, false, 'email', error.code);
+            } catch (logError) {
+                console.error("Failed to record failed login:", logError);
+            }
+
             switch (error.code) {
                 case "auth/user-not-found":
                     setEmailError("找不到此帳號，請檢查拼字是否正確");
@@ -150,9 +167,23 @@ export default function Login() {
         try {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
+
+            try {
+                await recordLogin(result.user, true, 'google');
+            } catch (logError) {
+                console.error("Failed to record successful login:", logError);
+            }
+
             router.push("/dashboard");
         } catch (error: any) {
             console.error("Google login FAILED!!!:", error);
+
+            try {
+                await recordLogin(null, false, 'google', error.code);
+            } catch (logError) {
+                console.error("Failed to record failed login:", logError);
+            }
+
             switch (error.code) {
                 case "auth/account-exists-with-different-credential":
                     setError("電子郵件已使用其他方式註冊");
@@ -182,9 +213,23 @@ export default function Login() {
         try {
             const provider = new GithubAuthProvider();
             const result = await signInWithPopup(auth, provider);
+
+            try {
+                await recordLogin(result.user, true, 'github');
+            } catch (logError) {
+                console.error("Failed to record successful login:", logError);
+            }
+
             router.push("/dashboard");
         } catch (error: any) {
             console.error("GitHub login FAILED!!!:", error);
+
+            try {
+                await recordLogin(null, false, 'github', error.code);
+            } catch (logError) {
+                console.error("Failed to record failed login:", logError);
+            }
+
             switch (error.code) {
                 case "auth/account-exists-with-different-credential":
                     setError("電子郵件已使用其他方式註冊");
