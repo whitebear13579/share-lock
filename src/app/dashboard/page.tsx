@@ -4,14 +4,13 @@ import { useAuth } from "@/utils/authProvider";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/button";
 import { Cog, Folder, House, LogOut, Star, FileText, ArrowRight, Share2, Check, Lock, X, ClockFading, LockOpen, ExternalLink, BellRing, Trash, ArrowUpRight, ChartPie, MessageCircleQuestionMark } from "lucide-react";
-import { Chip, Progress, Spinner, Navbar, NavbarBrand, NavbarContent, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, ScrollShadow, Link } from "@heroui/react";
+import { Chip, Progress, Spinner, Navbar, NavbarBrand, NavbarContent, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Link } from "@heroui/react";
 import CustomButton from "@/components/button";
 import { Image } from "@heroui/react";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
 import { Spacer } from "@heroui/spacer";
 import { Avatar, Divider } from "@heroui/react";
 import { IoAlertOutline } from "react-icons/io5";
-import { useAnimationFrame } from "framer-motion";
 
 export default function Dashboard() {
     const welcomeString = ["🌅 早安，歡迎回來！", "☀️ 午安，歡迎回來！", "🌇 晚安，近來好嗎？", "🌙 夜深了，好好休息吧！"]
@@ -50,7 +49,7 @@ export default function Dashboard() {
             router.push("/login");
         }
     }, [user, loading, router]);
-    
+
     if (loading) {
         return (
             <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55% flex items-center justify-center">
@@ -570,7 +569,7 @@ export default function Dashboard() {
                                         <div className="grid grid-cols-[auto_3fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2">
                                             <Avatar src="https://i.pravatar.cc/40?u=user1" size="sm" />
                                             <div className="flex min-w-0 flex-col">
-                                                <p className="text-white text-sm font-medium truncate">Anna 想分享 "線性代數考古題"</p>
+                                            <p className="text-white text-sm font-medium truncate">Anna 想分享 &quot;線性代數考古題&quot;</p>
                                                 <p className="text-xs text-gray-400 flex gap-1 items-center">
                                                     <IoAlertOutline size={12} className="rounded-full bg-amber-500 p-0.5 text-zinc-900" />
                                                     即將失效：2025 / 08 / 31
@@ -588,7 +587,7 @@ export default function Dashboard() {
                                         <div className="grid grid-cols-[auto_3fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2">
                                             <Avatar src="https://i.pravatar.cc/40?u=user2" size="sm" />
                                             <div className="flex min-w-0 flex-col">
-                                                <p className="text-white text-sm font-medium truncate">Wendy 想分享 "計...答.pdf"</p>
+                                            <p className="text-white text-sm font-medium truncate">Wendy 想分享 &quot;計...答.pdf&quot;</p>
                                                 <p className="text-xs text-gray-400 flex gap-1 items-center">
                                                     <Check size={12} className="rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
                                                     2026 / 09 / 27 前有效
