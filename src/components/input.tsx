@@ -1,5 +1,4 @@
 import { Input, InputProps } from "@heroui/input";
-import { label } from "framer-motion/client";
 import { forwardRef, useState, useEffect } from "react";
 
 interface CustomInputProps extends Omit<InputProps, "variant"> {
