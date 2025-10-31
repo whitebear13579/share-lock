@@ -585,6 +585,17 @@ export default function Settings() {
         return null;
     }
 
+    const disabledAvatarSources = [];
+    if (!user.email) {
+        disabledAvatarSources.push("gravatar");
+    }
+    if (!isGoogleLinked()) {
+        disabledAvatarSources.push("google");
+    }
+    if (!isGithubLinked()) {
+        disabledAvatarSources.push("github");
+    }
+
     return (
         <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55%">
             {/* Operation Result Notification */}
@@ -825,10 +836,11 @@ export default function Settings() {
                                                     label: "text-gray-300"
                                                 }}
                                                 size="sm"
+                                                disabledKeys={disabledAvatarSources}
                                             >
-                                                <SelectItem key="gravatar" isDisabled={!user.email}>Gravatar</SelectItem>
-                                                <SelectItem key="google" isDisabled={!isGoogleLinked()}>Google</SelectItem>
-                                                <SelectItem key="github" isDisabled={!isGithubLinked()}>GitHub</SelectItem>
+                                                <SelectItem key="gravatar">Gravatar</SelectItem>
+                                                <SelectItem key="google">Google</SelectItem>
+                                                <SelectItem key="github">GitHub</SelectItem>
                                             </Select>
 
                                             <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
@@ -1204,10 +1216,11 @@ export default function Settings() {
                                             label: "text-gray-300"
                                         }}
                                         size="sm"
+                                        disabledKeys={disabledAvatarSources}
                                     >
-                                        <SelectItem key="gravatar" isDisabled={!user.email}>Gravatar</SelectItem>
-                                        <SelectItem key="google" isDisabled={!isGoogleLinked()}>Google</SelectItem>
-                                        <SelectItem key="github" isDisabled={!isGithubLinked()}>GitHub</SelectItem>
+                                        <SelectItem key="gravatar">Gravatar</SelectItem>
+                                        <SelectItem key="google">Google</SelectItem>
+                                        <SelectItem key="github">GitHub</SelectItem>
                                     </Select>
                                 </div>
                             </CardBody>
