@@ -31,7 +31,8 @@ import {
     EyeOff,
     Save,
     RefreshCw,
-    MessageCircleQuestionMark
+    MessageCircleQuestionMark,
+    EyeClosed
 } from "lucide-react";
 import {
     Spinner,
@@ -1487,13 +1488,13 @@ export default function Settings() {
                 <CustomModalContent>
                     {(onClose) => (
                         <>
-                            <CustomModalHeader className="flex flex-col gap-1">
-                                <h3 className="text-xl font-bold">更改使用者名稱</h3>
+                            <CustomModalHeader className="flex flex-col">
+                                <h3 className="pt-4">變更使用者名稱</h3>
                             </CustomModalHeader>
                             <CustomModalBody>
                                 <CustomInput
-                                    label="新的使用者名稱"
-                                    placeholder="輸入新的使用者名稱"
+                                    size="md"
+                                    label="輸入使用者名稱"
                                     value={displayName}
                                     onValueChange={setDisplayName}
                                 />
@@ -1526,38 +1527,40 @@ export default function Settings() {
                 <CustomModalContent>
                     {(onClose) => (
                         <>
-                            <CustomModalHeader className="flex flex-col gap-1">
-                                <h3 className="text-xl font-bold">更改電子郵件</h3>
-                                <p className="text-sm text-gray-400">需要輸入當前密碼以確認身份</p>
+                            <CustomModalHeader className="flex flex-col">
+                                <h3 className="pt-4">更改電子郵件</h3>
                             </CustomModalHeader>
                             <CustomModalBody>
-                                <CustomInput
-                                    label="新的電子郵件"
-                                    placeholder="輸入新的電子郵件地址"
-                                    type="email"
-                                    value={newEmail}
-                                    onValueChange={setNewEmail}
-                                />
-                                <CustomInput
-                                    label="當前密碼"
-                                    placeholder="輸入當前密碼以確認"
-                                    type={showCurrentPassword ? "text" : "password"}
-                                    value={currentPassword}
-                                    onValueChange={setCurrentPassword}
-                                    endContent={
-                                        <button
-                                            className="focus:outline-none"
-                                            type="button"
-                                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                        >
-                                            {showCurrentPassword ? (
-                                                <EyeOff className="text-2xl text-default-400 pointer-events-none" />
-                                            ) : (
-                                                <Eye className="text-2xl text-default-400 pointer-events-none" />
-                                            )}
-                                        </button>
-                                    }
-                                />
+                                <div className="relative w-full origin-center custom-input-trans-animate">
+                                    <CustomInput
+                                        size="md"
+                                        label="輸入新的電子郵件"
+                                        type="email"
+                                        onValueChange={setNewEmail}
+                                    />
+                                </div>
+                                <div className="relative w-full origin-center custom-input-trans-animate">
+                                    <CustomInput
+                                        size="md"
+                                        label="輸入密碼來確認"
+                                        type={showCurrentPassword ? "text" : "password"}
+                                        onValueChange={setCurrentPassword}
+                                    />
+                                    <Button
+                                        isIconOnly
+                                        variant="light"
+                                        aria-label="切換密碼是否可見"
+                                        className="absolute right-4 top-[30px] transform -translate-y-1/2 focus:outline-hidden bg-transparent hover:bg-transparent min-w-0 w-auto h-auto p-0 text-gray-300 hover:text-white"
+                                        type="button"
+                                        onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                                    >
+                                        {showCurrentPassword ? (
+                                            <EyeClosed size={20} />
+                                        ) : (
+                                            <Eye size={20} />
+                                        )}
+                                    </Button>
+                                </div>
                             </CustomModalBody>
                             <CustomModalFooter>
                                 <CustomButton
@@ -1587,71 +1590,76 @@ export default function Settings() {
                 <CustomModalContent>
                     {(onClose) => (
                         <>
-                            <CustomModalHeader className="flex flex-col gap-1">
-                                <h3 className="text-xl font-bold">更改密碼</h3>
-                                <p className="text-sm text-gray-400">請輸入當前密碼和新密碼</p>
+                            <CustomModalHeader className="flex flex-col">
+                                <h3 className="pt-4">更改密碼</h3>
                             </CustomModalHeader>
                             <CustomModalBody>
-                                <CustomInput
-                                    label="當前密碼"
-                                    placeholder="輸入當前密碼"
-                                    type={showCurrentPassword ? "text" : "password"}
-                                    value={currentPassword}
-                                    onValueChange={setCurrentPassword}
-                                    endContent={
-                                        <button
-                                            className="focus:outline-none"
-                                            type="button"
-                                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                        >
-                                            {showCurrentPassword ? (
-                                                <EyeOff className="text-2xl text-default-400 pointer-events-none" />
-                                            ) : (
-                                                <Eye className="text-2xl text-default-400 pointer-events-none" />
-                                            )}
-                                        </button>
-                                    }
-                                />
-                                <CustomInput
-                                    label="新密碼"
-                                    placeholder="輸入新密碼"
-                                    type={showNewPassword ? "text" : "password"}
-                                    value={newPassword}
-                                    onValueChange={setNewPassword}
-                                    endContent={
-                                        <button
-                                            className="focus:outline-none"
-                                            type="button"
-                                            onClick={() => setShowNewPassword(!showNewPassword)}
-                                        >
-                                            {showNewPassword ? (
-                                                <EyeOff className="text-2xl text-default-400 pointer-events-none" />
-                                            ) : (
-                                                <Eye className="text-2xl text-default-400 pointer-events-none" />
-                                            )}
-                                        </button>
-                                    }
-                                />
-                                <CustomInput
-                                    label="確認新密碼"
-                                    placeholder="再次輸入新密碼"
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    value={confirmPassword}
-                                    onValueChange={setConfirmPassword}
-                                    endContent={
-                                        <button
-                                            className="focus:outline-none"
-                                            type="button"
-                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        >
-                                            {showConfirmPassword ? (
-                                                <EyeOff className="text-2xl text-default-400 pointer-events-none" />
-                                            ) : (
-                                                <Eye className="text-2xl text-default-400 pointer-events-none" />
-                                            )}
-                                        </button>
-                                    }
-                                />
+                                <div className="relative w-full origin-center custom-input-trans-animate">
+                                    <CustomInput
+                                        size="md"
+                                        label="輸入目前的密碼"
+                                        type={showCurrentPassword ? "text" : "password"}
+                                        onValueChange={setCurrentPassword}
+                                    />
+                                    <Button
+                                        isIconOnly
+                                        variant="light"
+                                        aria-label="切換舊密碼是否可見"
+                                        className="absolute right-4 top-[30px] transform -translate-y-1/2 focus:outline-hidden bg-transparent hover:bg-transparent min-w-0 w-auto h-auto p-0 text-gray-300 hover:text-white"
+                                        type="button"
+                                        onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                                    >
+                                        {showCurrentPassword ? (
+                                            <EyeClosed size={20} />
+                                        ) : (
+                                            <Eye size={20} />
+                                        )}
+                                    </Button>
+                                </div>
+                                <div className="relative w-full origin-center custom-input-trans-animate">
+                                    <CustomInput
+                                        size="md"
+                                        label="輸入新的密碼"
+                                        type={showNewPassword ? "text" : "password"}
+                                        onValueChange={setNewPassword}
+                                    />
+                                    <Button
+                                        isIconOnly
+                                        variant="light"
+                                        aria-label="切換新密碼是否可見"
+                                        className="absolute right-4 top-[30px] transform -translate-y-1/2 focus:outline-hidden bg-transparent hover:bg-transparent min-w-0 w-auto h-auto p-0 text-gray-300 hover:text-white"
+                                        type="button"
+                                        onPress={() => setShowNewPassword(!showNewPassword)}
+                                    >
+                                        {showNewPassword ? (
+                                            <EyeClosed size={20} />
+                                        ) : (
+                                            <Eye size={20} />
+                                        )}
+                                    </Button>
+                                </div>
+                                <div className="relative w-full origin-center custom-input-trans-animate">
+                                    <CustomInput
+                                        size="md"
+                                        label="再次輸入新密碼"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        onValueChange={setConfirmPassword}
+                                    />
+                                    <Button
+                                        isIconOnly
+                                        variant="light"
+                                        aria-label="切換確認密碼是否可見"
+                                        className="absolute right-4 top-[30px] transform -translate-y-1/2 focus:outline-hidden bg-transparent hover:bg-transparent min-w-0 w-auto h-auto p-0 text-gray-300 hover:text-white"
+                                        type="button"
+                                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    >
+                                        {showConfirmPassword ? (
+                                            <EyeClosed size={20} />
+                                        ) : (
+                                            <Eye size={20} />
+                                        )}
+                                    </Button>
+                                </div>
                                 {newPassword !== confirmPassword && confirmPassword && (
                                     <p className="text-red-400 text-sm">密碼確認不一致</p>
                                 )}
@@ -1684,8 +1692,8 @@ export default function Settings() {
                 <CustomModalContent>
                     {(onClose) => (
                         <>
-                            <CustomModalHeader className="flex flex-col gap-1">
-                                <h3 className="text-xl font-bold text-red-400">刪除所有檔案</h3>
+                            <CustomModalHeader className="flex flex-col">
+                                <h3 className=" text-red-400 pt-4">刪除所有檔案</h3>
                                 <p className="text-sm text-gray-400">此操作無法復原</p>
                             </CustomModalHeader>
                             <CustomModalBody>
@@ -1740,8 +1748,8 @@ export default function Settings() {
                 <CustomModalContent>
                     {(onClose) => (
                         <>
-                            <CustomModalHeader className="flex flex-col gap-1">
-                                <h3 className="text-xl font-bold text-red-400">刪除帳號</h3>
+                            <CustomModalHeader className="flex flex-col">
+                                <h3 className=" text-red-400 pt-4">刪除帳號</h3>
                                 <p className="text-sm text-gray-400">此操作無法復原，請謹慎考慮</p>
                             </CustomModalHeader>
                             <CustomModalBody>
