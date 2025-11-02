@@ -56,6 +56,7 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
                     "tracking-wider",
                     "!text-white",
                     "px-4",
+                    "placeholder:text-gray-400",
                     "transition-all",
                     "duration-200",
                 ],
