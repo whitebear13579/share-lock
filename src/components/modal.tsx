@@ -49,7 +49,7 @@ const CustomModal = forwardRef<HTMLDivElement, CustomModalProps>(
                 wrapper: "",
                 base: "bg-zinc-800/65 backdrop-blur-xs border-2 border-white/20 shadow-2xl transition-all",
                 backdrop: "bg-black/40 backdrop-blur-xs",
-                header: "border-white/20 bg-transparent text-center tracking-wider text-2xl font-semibold",
+                header: "border-white/20 bg-transparent text-center tracking-wider text-2xl font-semibold flex flex-col",
                 body: "bg-transparent flex flex-col gap-6",
                 footer: "border-white/20 bg-transparent",
                 closeButton: "text-white hover:bg-white/20 active:bg-white/30",
