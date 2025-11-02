@@ -50,8 +50,6 @@ import {
     useDisclosure,
     Progress,
     Chip,
-    Select,
-    SelectItem,
     Switch,
     Spacer,
     Navbar,
@@ -76,6 +74,7 @@ import {
 } from "@heroui/react";
 import CustomButton from "@/components/button";
 import CustomInput from "@/components/input";
+import { CustomSelect, CustomSelectItem } from "@/components/select";
 import {
     CustomModal,
     CustomModalContent,
@@ -827,22 +826,17 @@ export default function Settings() {
                                         </div>
 
                                         <div className="w-full space-y-3">
-                                            <Select
+                                            <CustomSelect
                                                 label="頭像來源"
                                                 selectedKeys={new Set([avatarSource])}
                                                 onSelectionChange={(keys) => handleAvatarSourceChange(Array.from(keys)[0] as string)}
-                                                classNames={{
-                                                    trigger: "bg-white/10 border-white/20 text-white",
-                                                    value: "text-white",
-                                                    label: "text-gray-300"
-                                                }}
                                                 size="sm"
                                                 disabledKeys={disabledAvatarSources}
                                             >
-                                                <SelectItem key="gravatar">Gravatar</SelectItem>
-                                                <SelectItem key="google">Google</SelectItem>
-                                                <SelectItem key="github">GitHub</SelectItem>
-                                            </Select>
+                                                <CustomSelectItem key="gravatar">Gravatar</CustomSelectItem>
+                                                <CustomSelectItem key="google">Google</CustomSelectItem>
+                                                <CustomSelectItem key="github">GitHub</CustomSelectItem>
+                                            </CustomSelect>
 
                                             <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
                                                 <span className="text-gray-300 text-sm">使用者名稱</span>
@@ -1207,22 +1201,17 @@ export default function Settings() {
                                 </div>
 
                                 <div className="mt-3">
-                                    <Select
+                                    <CustomSelect
                                         label="頭像來源"
                                         selectedKeys={new Set([avatarSource])}
                                         onSelectionChange={(keys) => handleAvatarSourceChange(Array.from(keys)[0] as string)}
-                                        classNames={{
-                                            trigger: "bg-white/10 border-white/20 text-white",
-                                            value: "text-white",
-                                            label: "text-gray-300"
-                                        }}
                                         size="sm"
                                         disabledKeys={disabledAvatarSources}
                                     >
-                                        <SelectItem key="gravatar">Gravatar</SelectItem>
-                                        <SelectItem key="google">Google</SelectItem>
-                                        <SelectItem key="github">GitHub</SelectItem>
-                                    </Select>
+                                        <CustomSelectItem key="gravatar">Gravatar</CustomSelectItem>
+                                        <CustomSelectItem key="google">Google</CustomSelectItem>
+                                        <CustomSelectItem key="github">GitHub</CustomSelectItem>
+                                    </CustomSelect>
                                 </div>
                             </CardBody>
                         </Card>
@@ -1488,8 +1477,8 @@ export default function Settings() {
                 <CustomModalContent>
                     {(onClose) => (
                         <>
-                            <CustomModalHeader className="flex flex-col">
-                                <h3 className="pt-4">變更使用者名稱</h3>
+                            <CustomModalHeader>
+                                <div className="pt-4">變更使用者名稱</div>
                             </CustomModalHeader>
                             <CustomModalBody>
                                 <CustomInput
@@ -1527,8 +1516,8 @@ export default function Settings() {
                 <CustomModalContent>
                     {(onClose) => (
                         <>
-                            <CustomModalHeader className="flex flex-col">
-                                <h3 className="pt-4">更改電子郵件</h3>
+                            <CustomModalHeader>
+                                <div className="pt-4">更改電子郵件</div>
                             </CustomModalHeader>
                             <CustomModalBody>
                                 <div className="relative w-full origin-center custom-input-trans-animate">
@@ -1590,8 +1579,8 @@ export default function Settings() {
                 <CustomModalContent>
                     {(onClose) => (
                         <>
-                            <CustomModalHeader className="flex flex-col">
-                                <h3 className="pt-4">更改密碼</h3>
+                            <CustomModalHeader>
+                                <div className="pt-4">更改密碼</div>
                             </CustomModalHeader>
                             <CustomModalBody>
                                 <div className="relative w-full origin-center custom-input-trans-animate">
@@ -1692,8 +1681,8 @@ export default function Settings() {
                 <CustomModalContent>
                     {(onClose) => (
                         <>
-                            <CustomModalHeader className="flex flex-col">
-                                <h3 className=" text-red-400 pt-4">刪除所有檔案</h3>
+                            <CustomModalHeader>
+                                <div className=" text-red-400 pt-4">刪除所有檔案</div>
                                 <p className="text-sm text-gray-400">此操作無法復原</p>
                             </CustomModalHeader>
                             <CustomModalBody>
@@ -1748,7 +1737,7 @@ export default function Settings() {
                 <CustomModalContent>
                     {(onClose) => (
                         <>
-                            <CustomModalHeader className="flex flex-col">
+                            <CustomModalHeader>
                                 <h3 className=" text-red-400 pt-4">刪除帳號</h3>
                                 <p className="text-sm text-gray-400">此操作無法復原，請謹慎考慮</p>
                             </CustomModalHeader>
