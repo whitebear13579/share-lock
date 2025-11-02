@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         const shareData = shareDoc.data();
         if (!shareData) {
             return NextResponse.json(
-                { error: "file does not exist" },
+                { error: "share data does not exist" },
                 { status: 404 }
             );
         }
