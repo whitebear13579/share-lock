@@ -11,8 +11,7 @@ import {
     CircleX,
     Eye,
     EyeClosed,
-    Key,
-    MoveLeft,
+    Key
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import PageTransition from "@/components/pageTransition";
