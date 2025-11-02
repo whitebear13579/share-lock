@@ -76,9 +76,10 @@ export default function ResetPassword() {
                 setUserEmail(email);
                 setIsValidating(false);
                 setHasCompletedValidation(true);
-            } catch (error: any) {
+            } catch (error) {
                 console.error("驗證重設代碼失敗:", error);
-                switch (error.code) {
+                const firebaseError = error as { code?: string };
+                switch (firebaseError.code) {
                     case "auth/invalid-action-code":
                         setError("無效或已過期的密碼重設連結");
                         break;
@@ -135,12 +136,14 @@ export default function ResetPassword() {
                     await new Promise((resolve) => setTimeout(resolve, 100));
                     router.push("/login");
                 } catch (error) {
+                    console.error("transition failed!!!:", error);
                     router.push("/login");
                 }
             }, 5000);
-        } catch (error: any) {
+        } catch (error) {
             console.error("密碼重設失敗:", error);
-            switch (error.code) {
+            const firebaseError = error as { code?: string };
+            switch (firebaseError.code) {
                 case "auth/invalid-action-code":
                     setError("無效或已過期的密碼重設連結");
                     break;
@@ -393,7 +396,7 @@ export default function ResetPassword() {
         let lastProcessedTimestamp = 0;
 
         const handleClick = async (e: MouseEvent) => {
-            if ((e as any).__handled) {
+            if ((e as MouseEvent & { __handled?: boolean }).__handled) {
                 return;
             }
 
@@ -443,7 +446,7 @@ export default function ResetPassword() {
                     e.stopPropagation();
                     e.stopImmediatePropagation();
 
-                    (e as any).__handled = true;
+                    (e as MouseEvent & { __handled?: boolean }).__handled = true;
 
                     if (isNavigating) {
                         link.setAttribute("href", originalHref);
@@ -500,8 +503,7 @@ export default function ResetPassword() {
                         {/* invalid(error) container */}
                         <div
                             ref={invalidLinkRef}
-                            className="flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide gap-4"
-                            style={{ display: "none" }}
+                            className="hidden flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide gap-4"
                         >
                             <CircleX size={64} className="text-red-500" />
                             <div className="text-2xl font-bold">
@@ -530,8 +532,7 @@ export default function ResetPassword() {
                         {/* reset password container */}
                         <div
                             ref={formContainerRef}
-                            className="flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide"
-                            style={{ display: "none" }}
+                            className="hidden flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide"
                         >
                             <div className="flex items-center justify-center w-full text-3xl font-bold text-white pb-2">
                                 重設密碼
@@ -547,11 +548,10 @@ export default function ResetPassword() {
 
                             <div
                                 ref={errorBoxRef}
-                                className={`w-full max-w-md p-1.5 border-2 rounded-full text-sm text-center flex items-center justify-center gap-2 ${success
+                                className={`w-full max-w-md p-1.5 border-2 rounded-full text-sm text-center items-center justify-center gap-2 ${error ? "flex" : "hidden"} ${success
                                     ? "bg-green-500/20 border-green-500/50 text-green-200"
                                     : "bg-red-500/20 border-red-500/50 text-red-200"
                                     }`}
-                                style={{ display: error ? "flex" : "none" }}
                             >
                                 <div className="flex-shrink-0">
                                     {success ? (
@@ -566,11 +566,7 @@ export default function ResetPassword() {
                             </div>
 
                             <div
-                                className={`w-full max-w-md flex flex-col items-center ${!passwordError && !confirmPasswordError ? "space-y-6" : "space-y-4"}`}
-                                style={{
-                                    transition:
-                                        "gap 0.3s ease-out, margin 0.3s ease-out, padding 0.3s ease-out",
-                                }}
+                                className={`w-full max-w-md flex flex-col items-center transition-all duration-300 ease-out ${!passwordError && !confirmPasswordError ? "space-y-6" : "space-y-4"}`}
                             >
                                 <div className="relative w-full custom-input-trans-animate">
                                     <CustomInput
