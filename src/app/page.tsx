@@ -10,6 +10,7 @@ import CustomInput from "@/components/input";
 import PageTransition from "@/components/pageTransition";
 import { useAuth } from "@/utils/authProvider";
 import { Avatar } from "@heroui/avatar";
+import UploadFiles from "@/components/uploadFiles";
 
 export default function Home() {
     const router = useRouter();
@@ -20,6 +21,7 @@ export default function Home() {
     const pdfDownBtnRef = useRef<HTMLDivElement>(null);
 
     const { user, loading } = useAuth();
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
     // animation setup
     useEffect(() => {
@@ -296,6 +298,7 @@ export default function Home() {
                                             />
                                         }
                                         isDisabled={loading}
+                                        onPress={() => setIsUploadModalOpen(true)}
                                         className="text-lg hover:bg-emerald-400 hover:text-gray-800 text-gray-200 lg:w-auto justify-center overflow-visible group"
                                     >
                                         上傳檔案
@@ -321,6 +324,16 @@ export default function Home() {
                     </p>
                 </div>
             </div>
+
+            {/* Upload Modal */}
+            <UploadFiles
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                onSuccess={(shareId, shareUrl) => {
+                    console.log("上傳成功:", shareId, shareUrl);
+                    setIsUploadModalOpen(false);
+                }}
+            />
         </PageTransition>
     );
 }
