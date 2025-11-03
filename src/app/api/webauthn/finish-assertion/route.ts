@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
         if (!shareId || !credential) {
             return NextResponse.json(
-                { error: "missing required parameters" },
+                { error: "缺少必要參數" },
                 { status: 400 }
             );
         }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
         if (challengesSnapshot.empty) {
             return NextResponse.json(
-                { error: "can not find corresponding challenge" },
+                { error: "找不到認證階段" },
                 { status: 400 }
             );
         }
@@ -52,11 +52,12 @@ export async function POST(request: NextRequest) {
         const challengeData = challenges[0].data;
         const expectedChallenge = challengeData.challenge;
         const fileId = challengeData.fileId;
+        const expectedUserId = challengeData.userId;
 
         const expiresAt = challengeData.expiresAt?.toDate().getTime();
         if (expiresAt && Date.now() > expiresAt) {
             return NextResponse.json(
-                { error: "Challenge expired, please restart" },
+                { error: "認證階段已過期，請重試" },
                 { status: 400 }
             );
         }
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
 
         if (!fileDoc.exists) {
             return NextResponse.json(
-                { error: "file not exist" },
+                { error: "檔案不存在" },
                 { status: 404 }
             );
         }
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
         const fileData = fileDoc.data();
         if (!fileData) {
             return NextResponse.json(
-                { error: "file data not exist" },
+                { error: "檔案資料不存在" },
                 { status: 404 }
             );
         }
@@ -87,7 +88,28 @@ export async function POST(request: NextRequest) {
 
         if (!device) {
             return NextResponse.json(
-                { error: "this device is not bound to the file" },
+                { error: "您的裝置未綁定到該檔案" },
+                { status: 403 }
+            );
+        }
+
+        // verify user identity matches boundByUid
+        if (device.boundByUid && device.boundByUid !== expectedUserId) {
+            console.error("User mismatch:", {
+                deviceBoundBy: device.boundByUid,
+                currentUser: expectedUserId,
+                credentialId: device.credentialId,
+            });
+            return NextResponse.json(
+                { error: "此裝置綁定至其他使用者帳號" },
+                { status: 403 }
+            );
+        }
+
+        // if the device is not bound to any user, reject the request
+        if (!device.boundByUid) {
+            return NextResponse.json(
+                { error: "拒絕存取" },
                 { status: 403 }
             );
         }
@@ -112,7 +134,7 @@ export async function POST(request: NextRequest) {
 
         if (!verification.verified) {
             return NextResponse.json(
-                { error: "device verification failed" },
+                { error: "裝置認證失敗" },
                 { status: 403 }
             );
         }
@@ -135,7 +157,7 @@ export async function POST(request: NextRequest) {
                     credentialId: device.credentialId,
                 });
                 return NextResponse.json(
-                    { error: "detected abnormality: signature counter not incremented" },
+                    { error: "偵測到驗證器異常行為" },
                     { status: 403 }
                 );
             }
@@ -157,7 +179,7 @@ export async function POST(request: NextRequest) {
         });
 
         // generate JWT sessionToken (valid for 5 mins)
-        const jwtSecret = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+        const jwtSecret = process.env.JWT_SECRET || "False Amber (from the Black Bazaar, Or by A Kervan Trader from the Lands Afar, Or Buried Beneath the Shifting Sands That Lead Everywhere but Nowhere)";
         const sessionToken = jwt.sign(
             {
                 shareId,
@@ -184,7 +206,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error("Finish assertion error:", error);
         return NextResponse.json(
-            { error: `verification failed: ${error instanceof Error ? error.message : 'unknown error'}` },
+            { error: `/api/webauthn/finish-assertion 錯誤： ${error instanceof Error ? error.message : '未知的錯誤'}` },
             { status: 500 }
         );
     }

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
         if (!shareId || typeof shareId !== "string") {
             return NextResponse.json(
-                { error: "shareId missing" },
+                { error: "缺少必要參數" },
                 { status: 400 }
             );
         }
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
         if (!shareDoc.exists || !shareDoc.data()?.valid) {
             return NextResponse.json(
-                { error: "link invalid or expired" },
+                { error: "連結無效或已過期" },
                 { status: 404 }
             );
         }
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         const shareData = shareDoc.data();
         if (!shareData) {
             return NextResponse.json(
-                { error: "share data does not exist" },
+                { error: "分享資料不存在" },
                 { status: 404 }
             );
         }
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         if (!fileDoc.exists) {
             return NextResponse.json(
-                { error: "file does not exist" },
+                { error: "檔案不存在" },
                 { status: 404 }
             );
         }
@@ -55,14 +55,14 @@ export async function POST(request: NextRequest) {
         const fileData = fileDoc.data();
         if (!fileData) {
             return NextResponse.json(
-                { error: "file data does not exist" },
+                { error: "檔案資料不存在" },
                 { status: 404 }
             );
         }
 
         if (fileData.shareMode !== "device") {
             return NextResponse.json(
-                { error: "this file is not device-bound" },
+                { error: "這個檔案不要求裝置驗證" },
                 { status: 400 }
             );
         }
@@ -113,9 +113,9 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error("Start registration error:", error);
+        console.error("/api/webauthn/start-registration 錯誤", error);
         return NextResponse.json(
-            { error: "start registration failed" },
+            { error: "/api/webauthn/start-registration 錯誤" },
             { status: 500 }
         );
     }

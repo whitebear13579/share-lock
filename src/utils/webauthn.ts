@@ -75,6 +75,7 @@ const base64UrlDecode = (base64url: string): ArrayBuffer => {
 // device authenticator registration
 export const registerAuthenticator = async (
     shareId: string,
+    userId: string,
     deviceLabel?: string
 ): Promise<{
     success: boolean;
@@ -105,7 +106,7 @@ export const registerAuthenticator = async (
 
         if (!startRes.ok) {
             const errorData = await startRes.json();
-            throw new Error(errorData.error || "cannot fetch registration options");
+            throw new Error(errorData.error || "無法擷取註冊選項");
         }
 
         const { options } = await startRes.json();
@@ -129,7 +130,7 @@ export const registerAuthenticator = async (
         }) as PublicKeyCredential | null;
 
         if (!credential) {
-            throw new Error("憑證建立失敗");
+            throw new Error("憑證創建失敗");
         }
 
         const attestationResponse = credential.response as AuthenticatorAttestationResponse;
@@ -153,6 +154,7 @@ export const registerAuthenticator = async (
                 shareId,
                 credential: credentialData,
                 deviceLabel,
+                userId,
             }),
         });
 
@@ -194,7 +196,8 @@ export const registerAuthenticator = async (
 
 // device authenticator verification
 export const verifyAuthenticator = async (
-    shareId: string
+    shareId: string,
+    userId: string
 ): Promise<{
     success: boolean;
     verified?: boolean;
@@ -222,7 +225,7 @@ export const verifyAuthenticator = async (
         const startRes = await fetch("/api/webauthn/start-assertion", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ shareId }),
+            body: JSON.stringify({ shareId, userId }),
         });
 
         if (!startRes.ok) {
@@ -249,7 +252,7 @@ export const verifyAuthenticator = async (
         }) as PublicKeyCredential | null;
 
         if (!credential) {
-            throw new Error("verification failed!");
+            throw new Error("驗證失敗!");
         }
 
         const assertionResponse = credential.response as AuthenticatorAssertionResponse;

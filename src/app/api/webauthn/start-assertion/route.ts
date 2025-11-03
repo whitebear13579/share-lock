@@ -16,12 +16,19 @@ import crypto from "crypto";
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { shareId } = body;
+        const { shareId, userId } = body;
 
         if (!shareId || typeof shareId !== "string") {
             return NextResponse.json(
-                { error: "shareId missing" },
+                { error: "缺少必要參數" },
                 { status: 400 }
+            );
+        }
+
+        if (!userId || typeof userId !== "string") {
+            return NextResponse.json(
+                { error: "請先登入" },
+                { status: 401 }
             );
         }
 
@@ -30,7 +37,7 @@ export async function POST(request: NextRequest) {
 
         if (!shareDoc.exists || !shareDoc.data()?.valid) {
             return NextResponse.json(
-                { error: "link invalid or expired" },
+                { error: "連結無效或已過期" },
                 { status: 404 }
             );
         }
@@ -38,7 +45,7 @@ export async function POST(request: NextRequest) {
         const shareData = shareDoc.data();
         if (!shareData) {
             return NextResponse.json(
-                { error: "share data does not exist" },
+                { error: "分享資料不存在" },
                 { status: 404 }
             );
         }
@@ -48,7 +55,7 @@ export async function POST(request: NextRequest) {
 
         if (!fileDoc.exists) {
             return NextResponse.json(
-                { error: "file does not exist" },
+                { error: "檔案不存在" },
                 { status: 404 }
             );
         }
@@ -56,14 +63,14 @@ export async function POST(request: NextRequest) {
         const fileData = fileDoc.data();
         if (!fileData) {
             return NextResponse.json(
-                { error: "file data does not exist" },
+                { error: "檔案資料不存在" },
                 { status: 404 }
             );
         }
 
         if (fileData.shareMode !== "device") {
             return NextResponse.json(
-                { error: "this file is not device-bound" },
+                { error: "這個檔案不要求裝置驗證" },
                 { status: 400 }
             );
         }
@@ -72,7 +79,7 @@ export async function POST(request: NextRequest) {
         const allowedDevices = fileData.allowedDevices || [];
         if (allowedDevices.length === 0) {
             return NextResponse.json(
-                { error: "this file is not bound to any device" },
+                { error: "這個檔案未綁定任何裝置" },
                 { status: 400 }
             );
         }
@@ -86,6 +93,7 @@ export async function POST(request: NextRequest) {
             challenge,
             shareId,
             fileId,
+            userId,
             type: "assertion",
             createdAt: new Date(),
             expiresAt: new Date(Date.now() + 5 * 60 * 1000),
@@ -113,9 +121,9 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error("Start assertion error:", error);
+        console.error("/api/webauthn/start-assertion 錯誤", error);
         return NextResponse.json(
-            { error: "start assertion failed" },
+            { error: "/api/webauthn/start-assertion 錯誤" },
             { status: 500 }
         );
     }

@@ -17,11 +17,11 @@ import { isoBase64URL } from "@simplewebauthn/server/helpers";
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { shareId, credential, deviceLabel } = body;
+        const { shareId, credential, deviceLabel, userId } = body;
 
-        if (!shareId || !credential) {
+        if (!shareId || !credential || !userId) {
             return NextResponse.json(
-                { error: "missing required parameters" },
+                { error: "缺少必要參數" },
                 { status: 400 }
             );
         }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
         if (challengesSnapshot.empty) {
             return NextResponse.json(
-                { error: "can not find corresponding challenge" },
+                { error: "找不到認證階段" },
                 { status: 400 }
             );
         }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         const expiresAt = challengeData.expiresAt?.toDate().getTime();
         if (expiresAt && Date.now() > expiresAt) {
             return NextResponse.json(
-                { error: "Challenge expired, please restart" },
+                { error: "認證階段已過期，請重試" },
                 { status: 400 }
             );
         }
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
         if (!verification.verified || !verification.registrationInfo) {
             return NextResponse.json(
-                { error: "authentication verification failed" },
+                { error: "身分驗證失敗" },
                 { status: 400 }
             );
         }
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         // block backup-eligible authenticators
         if (backupEligible) {
             return NextResponse.json(
-                { error: "backup-eligible authenticators are not allowed" },
+                { error: "不允許使用具備份能力的驗證器" },
                 { status: 400 }
             );
         }
@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
             transports: credential.response?.transports || [],
             backupEligible,
             backupState,
+            boundByUid: userId,
         };
 
         const fileRef = adminDb.collection("files").doc(fileId);
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
 
         if (!fileDoc.exists) {
             return NextResponse.json(
-                { error: "file does not exist" },
+                { error: "檔案不存在" },
                 { status: 404 }
             );
         }
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error("Finish registration error:", error);
         return NextResponse.json(
-            { error: `Finish registration failed: ${error instanceof Error ? error.message : 'Unknown error'}` },
+            { error: `/api/webauthn/finish-registration 錯誤： ${error instanceof Error ? error.message : '未知的錯誤'}` },
             { status: 500 }
         );
     }

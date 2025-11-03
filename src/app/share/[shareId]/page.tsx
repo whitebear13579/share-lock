@@ -34,6 +34,7 @@ interface DeviceInfo {
     publicKey: string;
     counter: number;
     createdAt: Timestamp;
+    boundByUid?: string;
 }
 
 interface FileData {
@@ -286,7 +287,7 @@ export default function SharePage() {
                         return;
                     }
 
-                    const result = await registerAuthenticator(shareId, deviceLabel || "我的裝置");
+                    const result = await registerAuthenticator(shareId, user.uid, deviceLabel || "我的裝置");
 
                     if (!result.success) {
                         console.error("webauthn register failed:", result.error);
@@ -302,7 +303,7 @@ export default function SharePage() {
                         return;
                     }
 
-                    const result = await verifyAuthenticator(shareId);
+                    const result = await verifyAuthenticator(shareId, user.uid);
 
                     if (!result.success || !result.verified) {
                         console.error("webauthn verify failed:", result.error);
