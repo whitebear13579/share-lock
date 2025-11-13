@@ -663,28 +663,49 @@ export default function Settings() {
                                 aria-label="使用者頭像選單"
                                 variant="solid"
                                 itemClasses={{
-                                    base: "data-[hover=true]:bg-white/15"
+                                    base: "data-[hover=true]:bg-white/15",
                                 }}
                             >
-                                <DropdownItem key="profile" className="h-14 gap-2" textValue="用戶資訊">
-                                    <p className="font-semibold text-white">你好，{user?.displayName} !</p>
-                                    <p className="font-semibold text-gray-300">{user?.email}</p>
+                                <DropdownItem
+                                    key="profile"
+                                    className="h-14 gap-2"
+                                    textValue="用戶資訊"
+                                >
+                                    <p className="font-semibold text-white">
+                                        你好，{user?.displayName}!
+                                    </p>
+                                    <p className="font-semibold text-gray-300">
+                                        {user?.email}
+                                    </p>
                                 </DropdownItem>
                                 <DropdownItem
                                     key="helpandfeedback"
                                     className="h-9"
-                                    startContent={<MessageCircleQuestionMark size={18} className="text-white" />}
+                                    startContent={
+                                        <MessageCircleQuestionMark
+                                            size={18}
+                                            className="text-white"
+                                        />
+                                    }
                                 >
-                                    <Link href="https://github.com/whitebear13579/share-lock/issues" isExternal className="text-white">幫助與意見回饋</Link>
+                                    <Link
+                                        href="https://github.com/whitebear13579/share-lock/issues"
+                                        isExternal
+                                        className="text-white"
+                                    >
+                                        幫助與意見回饋
+                                    </Link>
                                 </DropdownItem>
                                 <DropdownItem
                                     key="logout"
                                     color="danger"
-                                    startContent={<LogOut size={18} className="text-red-400" />}
+                                    startContent={
+                                        <LogOut size={18} className="text-red-400" />
+                                    }
                                     onPress={logout}
                                     className="h-9 text-red-400"
                                 >
-                                    <span className="text-red-400" >登出</span>
+                                    <span className="text-red-400">登出</span>
                                 </DropdownItem>
                             </DropdownMenu>
                         </Dropdown>
@@ -692,33 +713,27 @@ export default function Settings() {
 
                     <NavbarMenu className="bg-black/10 pt-6 border-t-1.5 border-white/70">
                         <NavbarMenuItem>
-                            <NextLink href="/dashboard" className="block">
-                                <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors cursor-pointer">
-                                    <House size={20} />
-                                    <span className="text-lg">資訊主頁</span>
-                                </div>
+                            <NextLink href="/dashboard" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors">
+                                <House size={20} />
+                                <span className="text-lg">資訊主頁</span>
                             </NextLink>
                         </NavbarMenuItem>
                         <NavbarMenuItem>
-                            <NextLink href="/dashboard/files" className="block">
-                                <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors cursor-pointer">
-                                    <Folder size={20} />
-                                    <span className="text-lg">我的檔案</span>
-                                </div>
+                            <NextLink href="/dashboard/files" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors">
+                                <Folder size={20} />
+                                <span className="text-lg">我的檔案</span>
                             </NextLink>
                         </NavbarMenuItem>
                         <NavbarMenuItem>
-                            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/20 text-blue-400">
+                            <NextLink href="/dashboard/settings" className="flex items-center gap-3 p-3 rounded-xl bg-white/20 text-blue-400">
                                 <Cog size={20} />
                                 <span className="text-lg font-medium">帳號設定</span>
-                            </div>
+                            </NextLink>
                         </NavbarMenuItem>
                         <NavbarMenuItem>
-                            <NextLink href="/dashboard/bug-report" className="block">
-                                <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors cursor-pointer">
-                                    <Star size={20} />
-                                    <span className="text-lg">漏洞有賞計畫</span>
-                                </div>
+                            <NextLink href="/dashboard/bug-report" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors">
+                                <Star size={20} />
+                                <span className="text-lg">漏洞有賞計畫</span>
                             </NextLink>
                         </NavbarMenuItem>
                     </NavbarMenu>

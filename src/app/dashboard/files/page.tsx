@@ -328,29 +328,27 @@ export default function MyFiles() {
                     <NavbarMenu className="bg-black/10 pt-6 border-t-1.5 border-white/70">
                         <NavbarMenuItem>
                             <NextLink href="/dashboard" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors">
-                                <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors cursor-pointer">
-                                    <House size={20} />
-                                    <span className="text-lg">資訊主頁</span>
-                                </div>
+                                <House size={20} />
+                                <span className="text-lg">資訊主頁</span>
                             </NextLink>
                         </NavbarMenuItem>
                         <NavbarMenuItem>
-                            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/20 text-blue-400">
+                            <NextLink href="/dashboard/files" className="flex items-center gap-3 p-3 rounded-xl bg-white/20 text-blue-400">
                                 <Folder size={20} />
                                 <span className="text-lg font-medium">我的檔案</span>
-                            </div>
+                            </NextLink>
                         </NavbarMenuItem>
                         <NavbarMenuItem>
-                            <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors cursor-pointer">
+                            <NextLink href="/dashboard/settings" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors">
                                 <Cog size={20} />
                                 <span className="text-lg">帳號設定</span>
-                            </div>
+                            </NextLink>
                         </NavbarMenuItem>
                         <NavbarMenuItem>
-                            <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors cursor-pointer">
+                            <NextLink href="/dashboard/bug-report" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors">
                                 <Star size={20} />
                                 <span className="text-lg">漏洞有賞計畫</span>
-                            </div>
+                            </NextLink>
                         </NavbarMenuItem>
                     </NavbarMenu>
                 </Navbar>

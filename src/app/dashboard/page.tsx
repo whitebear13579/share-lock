@@ -3,17 +3,15 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/utils/authProvider";
 import { Button } from "@heroui/button";
 import { Cog, Folder, House, LogOut, Star, FileText, ArrowRight, Share2, Check, Lock, X, ClockFading, LockOpen, ExternalLink, BellRing, Trash, ArrowUpRight, ChartPie, MessageCircleQuestionMark } from "lucide-react";
-import { Chip, Progress, Spinner, Navbar, NavbarBrand, NavbarContent, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
+import { Chip, Progress, Spinner, Navbar, NavbarBrand, NavbarContent, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Avatar, Link } from "@heroui/react";
 import { Image } from "@heroui/react";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
 import { Spacer } from "@heroui/spacer";
-import { Avatar, Divider } from "@heroui/react";
+import { Divider } from "@heroui/react";
 import { IoAlertOutline } from "react-icons/io5";
 import DashboardNavigation from "@/components/dashboardNavigation";
 import DashboardContentTransition from "@/components/dashboardContentTransition";
-import CachedAvatar from "@/components/cachedAvatar";
 import NextLink from "next/link";
-import NextImage from "next/image";
 
 export default function Dashboard() {
     const welcomeString = ["🌅 早安，歡迎回來！", "☀️ 午安，歡迎回來！", "🌇 晚安，近來好嗎？", "🌙 夜深了，好好休息吧！"]
@@ -109,42 +107,63 @@ export default function Dashboard() {
                             }}
                         >
                             <DropdownTrigger>
-                                <CachedAvatar
+                                <Avatar
                                     isBordered
                                     as="button"
                                     className="transition-transform"
                                     color="success"
-                                    name={user?.displayName || "WTF"}
+                                    name={user?.displayName || "User"}
                                     size="sm"
-                                    source="default"
+                                    src={user?.photoURL || "/undefined.png"}
                                 />
                             </DropdownTrigger>
                             <DropdownMenu
                                 aria-label="使用者頭像選單"
                                 variant="solid"
                                 itemClasses={{
-                                    base: "data-[hover=true]:bg-white/15"
+                                    base: "data-[hover=true]:bg-white/15",
                                 }}
                             >
-                                <DropdownItem key="profile" className="h-14 gap-2" textValue="用戶資訊">
-                                    <p className="font-semibold text-white">你好，{user?.displayName} !</p>
-                                    <p className="font-semibold text-gray-300">{user?.email}</p>
+                                <DropdownItem
+                                    key="profile"
+                                    className="h-14 gap-2"
+                                    textValue="用戶資訊"
+                                >
+                                    <p className="font-semibold text-white">
+                                        你好，{user?.displayName}!
+                                    </p>
+                                    <p className="font-semibold text-gray-300">
+                                        {user?.email}
+                                    </p>
                                 </DropdownItem>
                                 <DropdownItem
                                     key="helpandfeedback"
                                     className="h-9"
-                                    startContent={<MessageCircleQuestionMark size={18} className="text-white" />}
+                                    startContent={
+                                        <MessageCircleQuestionMark
+                                            size={18}
+                                            className="text-white"
+                                        />
+                                    }
                                 >
-                                    <NextLink href="https://github.com/whitebear13579/share-lock/issues" className="text-white">幫助與意見回饋</NextLink>
+                                    <Link
+                                        href="https://github.com/whitebear13579/share-lock/issues"
+                                        isExternal
+                                        className="text-white"
+                                    >
+                                        幫助與意見回饋
+                                    </Link>
                                 </DropdownItem>
                                 <DropdownItem
                                     key="logout"
                                     color="danger"
-                                    startContent={<LogOut size={18} className="text-red-400" />}
+                                    startContent={
+                                        <LogOut size={18} className="text-red-400" />
+                                    }
                                     onPress={logout}
                                     className="h-9 text-red-400"
                                 >
-                                    <span className="text-red-400" >登出</span>
+                                    <span className="text-red-400">登出</span>
                                 </DropdownItem>
                             </DropdownMenu>
                         </Dropdown>
@@ -152,9 +171,9 @@ export default function Dashboard() {
 
                     <NavbarMenu className="bg-black/10 pt-6 border-t-1.5 border-white/70">
                         <NavbarMenuItem>
-                            <NextLink href="#" className="flex items-center gap-3 p-3 rounded-xl bg-white/20 text-blue-400">
+                            <NextLink href="/dashboard" className="flex items-center gap-3 p-3 rounded-xl bg-white/20 text-blue-400">
                                 <House size={20} />
-                                    <span className="text-lg font-medium">資訊主頁</span>
+                                <span className="text-lg font-medium">資訊主頁</span>
                             </NextLink>
                         </NavbarMenuItem>
                         <NavbarMenuItem>
@@ -170,7 +189,7 @@ export default function Dashboard() {
                             </NextLink>
                         </NavbarMenuItem>
                         <NavbarMenuItem>
-                            <NextLink href="/dashboard/rewards" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors">
+                            <NextLink href="/dashboard/bug-report" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors">
                                 <Star size={20} />
                                 <span className="text-lg">漏洞有賞計畫</span>
                             </NextLink>
