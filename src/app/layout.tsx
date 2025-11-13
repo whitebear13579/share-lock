@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+// @ts-expect-error - the globals.css file is missing type definitions
 import "./globals.css";
 import { HeroUIProvider } from "@heroui/react";
 import { AuthProvider } from "@/utils/authProvider";
+import { AvatarCacheProvider } from "@/utils/avatarCache";
 
 export const metadata: Metadata = {
     title: "Create Next App",
@@ -27,7 +29,11 @@ export default function RootLayout({
             </head>
             <body className="emfont-NotoSansTC">
                 <HeroUIProvider>
-                    <AuthProvider>{children}</AuthProvider>
+                    <AuthProvider>
+                        <AvatarCacheProvider>
+                            {children}
+                        </AvatarCacheProvider>
+                    </AuthProvider>
                 </HeroUIProvider>
             </body>
         </html>
