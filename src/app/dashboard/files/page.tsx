@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/utils/authProvider";
 import NextLink from "next/link";
 import { Button } from "@heroui/button";
@@ -52,7 +52,7 @@ import UploadFiles from "@/components/uploadFiles";
 import DashboardNavigation from "@/components/dashboardNavigation";
 import DashboardContentTransition from "@/components/dashboardContentTransition";
 
-// 模擬檔案數據
+// File data interface
 interface FileData {
     id: string;
     name: string;
@@ -64,100 +64,11 @@ interface FileData {
     sharedDate: string;
     views: number;
     downloads: number;
+    contentType?: string;
+    shareMode?: string;
+    remainingDownloads?: number;
+    maxDownloads?: number;
 }
-
-const myFilesData: FileData[] = [
-    {
-        id: "1",
-        name: "線性代數考古題.pdf",
-        size: "2.4 MB",
-        sharedWith: ["Anna", "Bob"],
-        expiryDate: "2025/12/31",
-        status: "active",
-        isProtected: true,
-        sharedDate: "2025/08/15",
-        views: 12,
-        downloads: 5,
-    },
-    {
-        id: "2",
-        name: "計算機概論小考解答.pdf",
-        size: "1.8 MB",
-        sharedWith: ["Wendy"],
-        expiryDate: "2026/09/27",
-        status: "active",
-        isProtected: false,
-        sharedDate: "2025/08/20",
-        views: 8,
-        downloads: 3,
-    },
-    {
-        id: "3",
-        name: "期末簡報.pptx",
-        size: "15.2 MB",
-        sharedWith: ["Harry", "Miya", "Tom"],
-        expiryDate: "2025/12/15",
-        status: "active",
-        isProtected: true,
-        sharedDate: "2025/08/10",
-        views: 25,
-        downloads: 10,
-    },
-];
-
-const sharedWithMeData: FileData[] = [
-    {
-        id: "4",
-        name: "資料結構筆記.docx",
-        size: "3.5 MB",
-        sharedWith: ["Me"],
-        expiryDate: "2026/01/15",
-        status: "active",
-        isProtected: false,
-        sharedDate: "2025/09/01",
-        views: 15,
-        downloads: 2,
-    },
-    {
-        id: "5",
-        name: "作業系統講義.pdf",
-        size: "8.7 MB",
-        sharedWith: ["Me"],
-        expiryDate: "2025/11/30",
-        status: "active",
-        isProtected: true,
-        sharedDate: "2025/08/25",
-        views: 20,
-        downloads: 7,
-    },
-];
-
-const expiredFilesData: FileData[] = [
-    {
-        id: "6",
-        name: "在學證明.pdf",
-        size: "0.5 MB",
-        sharedWith: ["School Office"],
-        expiryDate: "2025/08/01",
-        status: "expired",
-        isProtected: false,
-        sharedDate: "2025/07/15",
-        views: 5,
-        downloads: 1,
-    },
-    {
-        id: "7",
-        name: "專題報告初稿.docx",
-        size: "4.2 MB",
-        sharedWith: ["Professor Wang"],
-        expiryDate: "2025/07/31",
-        status: "expired",
-        isProtected: false,
-        sharedDate: "2025/07/20",
-        views: 10,
-        downloads: 2,
-    },
-];
 
 export default function MyFiles() {
     const { user, loading, logout } = useAuth();
@@ -166,6 +77,43 @@ export default function MyFiles() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [files, setFiles] = useState<FileData[]>([]);
+    const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+    const [filesError, setFilesError] = useState<string | null>(null);
+
+    // Fetch files from API
+    const fetchFiles = useCallback(async (type: string) => {
+        if (!user) return;
+
+        setIsLoadingFiles(true);
+        setFilesError(null);
+
+        try {
+            const idToken = await user.getIdToken();
+            const response = await fetch(`/api/files/list?type=${type}`, {
+                headers: {
+                    Authorization: `Bearer ${idToken}`,
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+                console.error("API Error:", response.status, errorData);
+                throw new Error(errorData.error || `Server error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("Fetched files:", data);
+            setFiles(data.files || []);
+        } catch (error) {
+            console.error("Error fetching files:", error);
+            const errorMessage = error instanceof Error ? error.message : "無法載入檔案列表";
+            setFilesError(errorMessage);
+            setFiles([]);
+        } finally {
+            setIsLoadingFiles(false);
+        }
+    }, [user]);
 
     useEffect(() => {
         const checkScreenSize = () => {
@@ -177,6 +125,13 @@ export default function MyFiles() {
 
         return () => window.removeEventListener("resize", checkScreenSize);
     }, []);
+
+    // Fetch files when tab changes or user changes
+    useEffect(() => {
+        if (user) {
+            fetchFiles(activeTab);
+        }
+    }, [activeTab, user, fetchFiles]);
 
     if (loading) {
         return (
@@ -196,20 +151,7 @@ export default function MyFiles() {
         return null;
     }
 
-    const getCurrentFiles = () => {
-        switch (activeTab) {
-            case "myFiles":
-                return myFilesData;
-            case "sharedWithMe":
-                return sharedWithMeData;
-            case "expired":
-                return expiredFilesData;
-            default:
-                return myFilesData;
-        }
-    };
-
-    const filteredFiles = getCurrentFiles().filter((file) =>
+    const filteredFiles = files.filter((file) =>
         file.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -454,11 +396,34 @@ export default function MyFiles() {
                             transition={{ duration: 0.3 }}
                             className="pb-16"
                         >
-                            {filteredFiles.length === 0 ? (
+                            {isLoadingFiles ? (
+                                <div className="flex justify-center items-center py-16">
+                                    <Spinner
+                                        classNames={{ label: "text-base text-white" }}
+                                        variant="dots"
+                                        size="lg"
+                                        color="default"
+                                        label="載入檔案中..."
+                                    />
+                                </div>
+                            ) : filesError ? (
+                                <Card className="bg-red-950/20 backdrop-blur-sm border-red-500/30">
+                                    <CardBody className="py-16 text-center">
+                                        <p className="text-red-300 text-lg">{filesError}</p>
+                                        <CustomButton
+                                            variant="blur"
+                                            onPress={() => fetchFiles(activeTab)}
+                                            className="mt-4"
+                                        >
+                                            重試
+                                        </CustomButton>
+                                    </CardBody>
+                                </Card>
+                            ) : filteredFiles.length === 0 ? (
                                 <Card className="bg-white/10 backdrop-blur-sm border-white/20">
                                     <CardBody className="py-16 text-center">
                                         <p className="text-gray-300 text-lg">
-                                            沒有找到符合條件的檔案
+                                            {searchQuery ? "沒有找到符合條件的檔案" : "目前沒有檔案"}
                                         </p>
                                     </CardBody>
                                 </Card>
@@ -648,7 +613,8 @@ export default function MyFiles() {
                 onClose={() => setIsUploadModalOpen(false)}
                 onSuccess={(shareId) => {
                     console.log("files upload success!", shareId);
-                    // TODO: refresh file list
+                    // Refresh file list after successful upload
+                    fetchFiles(activeTab);
                 }}
             />
         </div>
