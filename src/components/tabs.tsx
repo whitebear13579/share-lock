@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
 interface Tab {
@@ -13,6 +13,7 @@ interface TabsProps {
     defaultTab?: string;
     onTabChange?: (key: string) => void;
     className?: string;
+    layoutId?: string; // avoid layoutId conflicts when using multiple CustomTabs. the default layoutId is "activeTab"
 }
 
 export default function CustomTabs({
@@ -20,8 +21,15 @@ export default function CustomTabs({
     defaultTab,
     onTabChange,
     className = "",
+    layoutId = "activeTab", // default layoutId
 }: TabsProps) {
     const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.key);
+
+    useEffect(() => {
+        if (defaultTab) {
+            setActiveTab(defaultTab);
+        }
+    }, [defaultTab]);
 
     const handleTabClick = (key: string) => {
         setActiveTab(key);
@@ -42,7 +50,7 @@ export default function CustomTabs({
                     <span>{tab.label}</span>
                     {activeTab === tab.key && (
                         <motion.div
-                            layoutId="activeTab"
+                            layoutId={layoutId}
                             className="absolute -inset-3 lg:-inset-x-6 -inset-y-2.5 bg-neutral-950/60 rounded-full -z-10"
                             transition={{
                                 type: "spring",
