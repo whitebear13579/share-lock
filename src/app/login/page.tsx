@@ -89,17 +89,18 @@ export default function Login() {
             }
 
             router.push("/dashboard");
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Login FAILED!!!:", error);
             setResetEmailSent(false);
+            const firebaseError = error as { code: string };
 
             try {
-                await recordLogin(null, false, 'email', error.code);
+                await recordLogin(null, false, 'email', firebaseError.code);
             } catch (logError) {
                 console.error("Failed to record failed login:", logError);
             }
 
-            switch (error.code) {
+            switch (firebaseError.code) {
                 case "auth/user-not-found":
                     setEmailError("找不到此帳號，請檢查拼字是否正確");
                     break;
@@ -141,17 +142,20 @@ export default function Login() {
             await sendPasswordResetEmail(auth, email, actionCodeSettings);
             setResetEmailSent(true);
             setError("密碼重設信已發送");
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("reset pwd FAILED!!!:", error);
-            switch (error.code) {
-                case "auth/user-not-found":
-                    setEmailError("找不到此電子郵件帳號");
-                    break;
-                case "auth/invalid-email":
-                    setEmailError("電子郵件格式不正確");
-                    break;
-                default:
-                    setError("密碼重設失敗，請稍後再試");
+            if (typeof error === "object" && error !== null && "code" in error) {
+                const firebaseError = error as { code: string };
+                switch (firebaseError.code) {
+                    case "auth/user-not-found":
+                        setEmailError("找不到此電子郵件帳號");
+                        break;
+                    case "auth/invalid-email":
+                        setEmailError("電子郵件格式不正確");
+                        break;
+                    default:
+                        setError("密碼重設失敗，請稍後再試");
+                }
             }
         } finally {
             setIsLoading(false);
@@ -175,16 +179,16 @@ export default function Login() {
             }
 
             router.push("/dashboard");
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Google login FAILED!!!:", error);
-
+            const firebaseError = error as { code: string };
             try {
-                await recordLogin(null, false, 'google', error.code);
+                await recordLogin(null, false, 'google', firebaseError.code);
             } catch (logError) {
                 console.error("Failed to record failed login:", logError);
             }
 
-            switch (error.code) {
+            switch (firebaseError.code) {
                 case "auth/account-exists-with-different-credential":
                     setError("電子郵件已使用其他方式註冊");
                     break;
@@ -221,16 +225,16 @@ export default function Login() {
             }
 
             router.push("/dashboard");
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("GitHub login FAILED!!!:", error);
-
+            const firebaseError = error as { code: string };
             try {
-                await recordLogin(null, false, 'github', error.code);
+                await recordLogin(null, false, 'github', firebaseError.code);
             } catch (logError) {
                 console.error("Failed to record failed login:", logError);
             }
 
-            switch (error.code) {
+            switch (firebaseError.code) {
                 case "auth/account-exists-with-different-credential":
                     setError("電子郵件已使用其他方式註冊");
                     break;
