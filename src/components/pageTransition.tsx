@@ -2,12 +2,13 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { gsap } from "gsap";
+import { getNavigationDirection } from "./dashboardNavigation";
 
-interface pageTransitionProps {
+interface PageTransitionProps {
     children: React.ReactNode;
 }
 
-export default function pageTransition({ children }: pageTransitionProps) {
+export default function PageTransition({ children }: PageTransitionProps) {
     const pathname = usePathname();
     const containerRef = useRef<HTMLDivElement>(null);
     const prevPathnameRef = useRef<string>("");
@@ -17,19 +18,26 @@ export default function pageTransition({ children }: pageTransitionProps) {
 
         // if first load
         if (!prevPathnameRef.current) {
-            gsap.set(containerRef.current, { opacity: 1 });
+            gsap.set(containerRef.current, { opacity: 1, x: 0 });
             prevPathnameRef.current = pathname;
             return;
         }
 
         if (prevPathnameRef.current !== pathname) {
+            const direction = getNavigationDirection(prevPathnameRef.current, pathname);
+
+            // according user navigation direction
+            const startX = direction === "left" ? 100 : -100;
+
             gsap.set(containerRef.current, {
                 opacity: 0,
+                x: startX,
             });
 
             gsap.to(containerRef.current, {
                 opacity: 1,
-                duration: 0.2,
+                x: 0,
+                duration: 0.4,
                 ease: "power2.out",
             });
 
