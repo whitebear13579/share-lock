@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/utils/authProvider";
 import { useRouter } from "next/navigation";
 import NextLink from "next/link";
@@ -39,7 +39,7 @@ import {
     CardHeader,
     Avatar,
     useDisclosure,
-    Progress,
+    CircularProgress,
     Chip,
     Navbar,
     NavbarContent,
@@ -71,10 +71,7 @@ import {
 } from "@/components/modal";
 import DashboardNavigation from "@/components/dashboardNavigation";
 import DashboardContentTransition from "@/components/dashboardContentTransition";
-import CachedAvatar from "@/components/cachedAvatar";
 import { useAvatarCache } from "@/utils/avatarCache";
-import { Image } from "@heroui/react";
-import NextImage from "next/image";
 import {
     updateProfile,
     updateEmail,
@@ -89,7 +86,6 @@ import {
     unlink
 } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
-import { auth } from "@/utils/firebase";
 import CryptoJS from "crypto-js";
 import {
     getUserLoginHistory,
@@ -98,9 +94,10 @@ import {
     getDeviceInfo
 } from "@/utils/loginHistory";
 import { Timestamp } from 'firebase/firestore';
+import { getUserStorageUsage } from "@/utils/storageQuota";
 
 export default function Settings() {
-    const { user, loading, logout, recordUserLogin } = useAuth();
+    const { user, loading, logout } = useAuth();
     const router = useRouter();
     const { setAvatarUrl } = useAvatarCache();
 
@@ -108,7 +105,6 @@ export default function Settings() {
     const [isMobile, setIsMobile] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [displayName, setDisplayName] = useState("");
-    const [email, setEmail] = useState("");
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -134,6 +130,16 @@ export default function Settings() {
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [recentLogin, setRecentLogin] = useState<LoginRecord | null>(null);
 
+    // Storage state
+    const [storageData, setStorageData] = useState({
+        usedBytes: 0,
+        quotaBytes: 1024 * 1024 * 1024,
+        percentage: 0,
+        formattedUsed: "0 B",
+        formattedQuota: "1 GB",
+    });
+    const [isLoadingStorage, setIsLoadingStorage] = useState(true);
+
     useEffect(() => {
         const checkScreenSize = () => {
             setIsMobile(window.innerWidth < 1536);
@@ -145,10 +151,47 @@ export default function Settings() {
         return () => window.removeEventListener('resize', checkScreenSize);
     }, []);
 
+    // 載入登入紀錄
+    const loadLoginHistory = useCallback(async () => {
+        if (!user) return;
+
+        setIsLoadingHistory(true);
+        try {
+            console.log('Loading login history for user:', user.uid);
+            const history = await getUserLoginHistory(user.uid, 50);
+            console.log('Login history loaded:', history);
+            setLoginHistory(history);
+
+            const recent = await getRecentLoginRecord(user.uid);
+            console.log('Recent login record:', recent);
+            setRecentLogin(recent);
+        } catch (error) {
+            console.error('Failed to load login history:', error);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    }, [user]);
+
+    // 載入儲存空間數據
+    const loadStorageData = useCallback(async () => {
+        if (!user) return;
+
+        setIsLoadingStorage(true);
+        try {
+            console.log('Loading storage usage for user:', user.uid);
+            const usage = await getUserStorageUsage();
+            console.log('Storage usage loaded:', usage);
+            setStorageData(usage);
+        } catch (error) {
+            console.error('Failed to load storage usage:', error);
+        } finally {
+            setIsLoadingStorage(false);
+        }
+    }, [user]);
+
     useEffect(() => {
         if (user) {
             setDisplayName(user.displayName || "");
-            setEmail(user.email || "");
             setNewEmail(user.email || "");
 
             // Determine avatar source based on current photoURL and provider data
@@ -185,10 +228,11 @@ export default function Settings() {
                 }
             }
 
-            // 載入登入紀錄
+            // 載入登入紀錄和儲存空間數據
             loadLoginHistory();
+            loadStorageData();
         }
-    }, [user, loading, router]);
+    }, [user, loading, router, loadLoginHistory, loadStorageData]);
 
     // Helper functions
     const formatDate = (timestamp: string | Timestamp) => {
@@ -250,39 +294,6 @@ export default function Settings() {
 
     const isGoogleLinked = () => getLinkedProviders().includes('google.com');
     const isGithubLinked = () => getLinkedProviders().includes('github.com');
-
-    // 載入登入紀錄
-    const loadLoginHistory = async () => {
-        if (!user) return;
-
-        setIsLoadingHistory(true);
-        try {
-            console.log('Loading login history for user:', user.uid);
-            const history = await getUserLoginHistory(user.uid, 50);
-            console.log('Login history loaded:', history);
-            setLoginHistory(history);
-
-            const recent = await getRecentLoginRecord(user.uid);
-            console.log('Recent login record:', recent);
-            setRecentLogin(recent);
-        } catch (error) {
-            console.error('Failed to load login history:', error);
-        } finally {
-            setIsLoadingHistory(false);
-        }
-    };
-
-    // 在用戶登入時記錄登入資訊
-    const recordCurrentLogin = async () => {
-        if (user) {
-            const providers = user.providerData.map(p => p.providerId);
-            const provider = providers.length > 0 ? providers[0] : 'email';
-
-            await recordUserLogin(true, provider);
-            // 記錄後重新載入紀錄
-            await loadLoginHistory();
-        }
-    };
 
     const getAvatarUrl = () => {
         if (!user) return "/undefined.png";
@@ -741,12 +752,12 @@ export default function Settings() {
             )}
 
             <DashboardContentTransition>
-                <div className={isMobile ? "pt-20 px-4" : "pt-36 px-12"}>
-                    <h1 className={`font-bold text-white mb-2 ${isMobile ? "text-2xl" : "text-4xl"}`}>
-                        ⚙️ 帳號設定
-                    </h1>
+                <div className={isMobile ? "pt-20 px-4" : "pt-36 px-13"}>
+                    <div className={`font-bold text-white mb-2 ${isMobile ? "text-2xl" : "text-4xl"}`}>
+                        帳號設定
+                    </div>
                     <p className={`text-gray-300 ${isMobile ? "text-base" : "text-lg"}`}>
-                        你的帳號安全對我們來說至關重要。
+                        管理您的個人資料、安全設定與帳號偏好
                     </p>
                 </div>
 
@@ -755,43 +766,40 @@ export default function Settings() {
                     {/* Wide device layout */}
                     {!isMobile && (
                         <div className="space-y-6">
-                            {/* Personal Information Section */}
+                            {/* First Row - Profile and Stats */}
                             <div className="flex gap-6">
-                                {/* Profile Picture Card */}
-                                <Card className="bg-white/10 backdrop-blur-sm border-white/20 w-1/3" shadow="lg">
-                                    <CardHeader className="pb-2 pt-6 px-6 flex-row items-center gap-3">
-                                        <div className="bg-blue-600/30 p-3 rounded-xl">
-                                            <User size={24} className="text-blue-400" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-lg text-white">個人資料</h4>
-                                            <p className="text-gray-300 text-sm">管理您的基本資訊</p>
+                                {/* Profile Card */}
+                                <Card className="bg-white/10 backdrop-blur-sm border-white/20 w-[280px]" shadow="lg">
+                                    <CardHeader className="pb-0 pt-6 px-6 flex-col items-start gap-2">
+                                        <div className="flex items-center gap-3 w-full">
+                                            <div className="bg-blue-600/30 p-2.5 rounded-xl">
+                                                <User size={22} className="text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-xl text-white">個人資料</h4>
+                                                <p className="text-gray-300 text-sm">管理基本資訊</p>
+                                            </div>
                                         </div>
                                     </CardHeader>
-                                    <CardBody className="px-6 py-4">
-                                        <div className="flex flex-col items-center space-y-4">
+                                    <CardBody className="px-6 py-6">
+                                        <div className="flex flex-col items-center space-y-5">
                                             <div className="relative">
                                                 <Avatar
                                                     src={getAvatarUrl()}
                                                     className="w-24 h-24"
                                                     name={user.displayName || "User"}
                                                 />
-                                                <Button
-                                                    isIconOnly
-                                                    className="custom-button-trans-override absolute -bottom-1 -right-1 bg-blue-600 text-white"
-                                                    size="sm"
-                                                    radius="full"
-                                                >
-                                                    <Camera size={16} />
-                                                </Button>
+                                                <div className="absolute -bottom-1 -right-1 bg-blue-600 rounded-full p-1.5">
+                                                    <Camera size={14} className="text-white" />
+                                                </div>
                                             </div>
 
-                                            <div className="w-full space-y-3">
+                                            <div className="w-full space-y-4">
                                                 <CustomSelect
                                                     label="頭像來源"
                                                     selectedKeys={new Set([avatarSource])}
                                                     onSelectionChange={(keys) => handleAvatarSourceChange(Array.from(keys)[0] as string)}
-                                                    size="sm"
+                                                    size="md"
                                                     disabledKeys={disabledAvatarSources}
                                                 >
                                                     <CustomSelectItem key="gravatar">Gravatar</CustomSelectItem>
@@ -799,10 +807,10 @@ export default function Settings() {
                                                     <CustomSelectItem key="github">GitHub</CustomSelectItem>
                                                 </CustomSelect>
 
-                                                <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                                                <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-lg">
                                                     <span className="text-gray-300 text-sm">使用者名稱</span>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-white font-medium">{user.displayName || "未設定"}</span>
+                                                        <span className="text-white font-medium text-base">{user.displayName || "未設定"}</span>
                                                         <Button
                                                             isIconOnly
                                                             className="custom-button-trans-override bg-white/10 text-gray-300"
@@ -818,262 +826,314 @@ export default function Settings() {
                                     </CardBody>
                                 </Card>
 
-                                {/* Account Info Card */}
+                                {/* Stats and Storage Card */}
                                 <Card className="flex-1 bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
                                     <CardHeader className="pb-2 pt-6 px-6 flex-row items-center gap-3">
-                                        <div className="bg-green-600/30 p-3 rounded-xl">
-                                            <Calendar size={24} className="text-green-400" />
+                                        <div className="bg-purple-600/30 p-2.5 rounded-xl">
+                                            <ChartPie size={22} className="text-purple-400" />
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-lg text-white">帳號資訊</h4>
-                                            <p className="text-gray-300 text-sm">查看您的帳號統計資料</p>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-xl text-white">使用統計</h4>
+                                            <p className="text-gray-300 text-sm">您的活動概覽</p>
                                         </div>
                                     </CardHeader>
-                                    <CardBody className="px-6 py-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="p-4 bg-white/5 rounded-lg">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Calendar size={16} className="text-blue-400" />
-                                                    <span className="text-gray-300 text-sm">加入時間</span>
+                                    <CardBody className="px-6 py-6">
+                                        <div className="flex gap-6">
+                                            {/* Left side - Statistics (Vertical Layout) */}
+                                            <div className="flex-1 flex flex-col gap-4">
+                                                {/* 加入天數 */}
+                                                <div className="p-4 bg-white/5 rounded-lg flex items-center gap-4">
+                                                    <div className="p-3 bg-blue-500/20 rounded-xl">
+                                                        <Calendar size={24} className="text-blue-400" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-gray-400 text-sm mb-1">加入天數</p>
+                                                        <p className="text-white font-bold text-2xl">
+                                                            {Math.floor((new Date().getTime() - new Date(user.metadata.creationTime!).getTime()) / (1000 * 60 * 60 * 24))}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-white font-medium text-sm">
-                                                    {formatDate(user.metadata.creationTime!)}
-                                                </p>
+
+                                                {/* 已分享 */}
+                                                <div className="p-4 bg-white/5 rounded-lg flex items-center gap-4">
+                                                    <div className="p-3 bg-purple-500/20 rounded-xl">
+                                                        <HardDrive size={24} className="text-purple-400" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-gray-400 text-sm mb-1">已分享</p>
+                                                        <p className="text-white font-bold text-2xl">23</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* 已收到 */}
+                                                <div className="p-4 bg-white/5 rounded-lg flex items-center gap-4">
+                                                    <div className="p-3 bg-orange-500/20 rounded-xl">
+                                                        <HardDrive size={24} className="text-orange-400" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-gray-400 text-sm mb-1">已收到</p>
+                                                        <p className="text-white font-bold text-2xl">47</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* 最後登入 */}
+                                                <div className="p-4 bg-white/5 rounded-lg flex items-center gap-4">
+                                                    <div className="p-3 bg-green-500/20 rounded-xl">
+                                                        <Clock size={24} className="text-green-400" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-gray-400 text-sm mb-1">最後登入</p>
+                                                        <p className="text-white font-bold text-2xl">
+                                                            {getRelativeTime(user.metadata.lastSignInTime!)}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            <div className="p-4 bg-white/5 rounded-lg">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Clock size={16} className="text-green-400" />
-                                                    <span className="text-gray-300 text-sm">最後登入</span>
+                                            {/* Right side - Storage Usage */}
+                                            <div className="flex-1 p-6 bg-white/5 rounded-lg">
+                                                <div className="flex items-center gap-2 mb-6">
+                                                    <ChartPie size={20} className="text-yellow-400" />
+                                                    <span className="text-gray-300 text-base font-medium">容量使用狀況</span>
                                                 </div>
-                                                <p className="text-white font-medium text-sm">
-                                                    {formatDate(user.metadata.lastSignInTime!)}
-                                                </p>
-                                            </div>
-
-                                            <div className="p-4 bg-white/5 rounded-lg">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <HardDrive size={16} className="text-purple-400" />
-                                                    <span className="text-gray-300 text-sm">已分享檔案</span>
+                                                <div className="flex flex-col items-center justify-center gap-6">
+                                                    {isLoadingStorage ? (
+                                                        <CircularProgress
+                                                            size="lg"
+                                                            strokeWidth={4}
+                                                            aria-label="Loading storage data"
+                                                            classNames={{
+                                                                svg: "w-40 h-40 drop-shadow-lg",
+                                                                indicator: "stroke-cyan-400",
+                                                                track: "stroke-white/20"
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <CircularProgress
+                                                            size="lg"
+                                                            value={storageData.percentage}
+                                                            strokeWidth={4}
+                                                            showValueLabel={true}
+                                                            classNames={{
+                                                                svg: "w-40 h-40 drop-shadow-lg",
+                                                                indicator: storageData.percentage >= 90
+                                                                    ? "stroke-red-500"
+                                                                    : storageData.percentage >= 75
+                                                                        ? "stroke-amber-500"
+                                                                        : "stroke-cyan-500",
+                                                                track: "stroke-white/20",
+                                                                value: "text-3xl font-bold text-white"
+                                                            }}
+                                                        />
+                                                    )}
+                                                    <div className="flex flex-col gap-3 w-full">
+                                                        <div className="flex items-center justify-between px-4">
+                                                            <span className="text-sm text-gray-400">已使用</span>
+                                                            <span className="text-lg font-semibold text-white">{storageData.formattedUsed}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between px-4">
+                                                            <span className="text-sm text-gray-400">總容量</span>
+                                                            <span className="text-lg font-semibold text-gray-300">{storageData.formattedQuota}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-center gap-2 mt-2">
+                                                            {storageData.percentage >= 90 ? (
+                                                                <>
+                                                                    <AlertTriangle size={16} className="text-red-400" />
+                                                                    <span className="text-sm text-red-400 font-medium">容量不足</span>
+                                                                </>
+                                                            ) : storageData.percentage >= 75 ? (
+                                                                <>
+                                                                    <AlertTriangle size={16} className="text-amber-400" />
+                                                                    <span className="text-sm text-amber-400 font-medium">即將滿載</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Check size={16} className="text-cyan-400" />
+                                                                    <span className="text-sm text-cyan-400 font-medium">使用正常</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <p className="text-white font-medium text-lg">23</p>
                                             </div>
-
-                                            <div className="p-4 bg-white/5 rounded-lg">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <HardDrive size={16} className="text-orange-400" />
-                                                    <span className="text-gray-300 text-sm">收到檔案</span>
-                                                </div>
-                                                <p className="text-white font-medium text-lg">47</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Storage Usage */}
-                                        <div className="mt-4 p-4 bg-white/5 rounded-lg">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <ChartPie size={16} className="text-yellow-400" />
-                                                <span className="text-gray-300 text-sm">容量使用狀況</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-sm text-gray-200 font-medium pb-2">
-                                                {true ? (
-                                                    <>
-                                                        <AlertTriangle size={16} className="text-amber-500" />
-                                                        <span>容量即將滿載，請考慮清理不需要的檔案</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Check size={16} className="text-green-500" />
-                                                        <span>容量使用正常</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                            <Progress
-                                                size="md"
-                                                radius="full"
-                                                showValueLabel
-                                                classNames={{
-                                                    indicator: (true
-                                                        ? "bg-linear-245 from-amber-500 to-rose-700"
-                                                        : "bg-linear-245 from-cyan-500 to-sky-600"
-                                                    ),
-                                                    track: "drop-shadow-lg border border-white/30 bg-gray-900/10",
-                                                    value: "text-base font-medium text-gray-200",
-                                                    label: "text-gray-300 font-normal text-sm"
-                                                }}
-                                                label="882 MB / 1 GB"
-                                                value={86}
-                                            />
                                         </div>
                                     </CardBody>
                                 </Card>
                             </div>
 
-                            {/* Account Security Section */}
+                            {/* Second Row - Security Settings */}
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
                                 <CardHeader className="pb-2 pt-6 px-6 flex-row items-center gap-3">
-                                    <div className="bg-orange-600/30 p-3 rounded-xl">
-                                        <Shield size={24} className="text-orange-400" />
+                                    <div className="bg-orange-600/30 p-2.5 rounded-xl">
+                                        <Shield size={22} className="text-orange-400" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-lg text-white">帳號安全</h4>
-                                        <p className="text-gray-300 text-sm">管理您的登入資訊和安全設定</p>
+                                        <h4 className="font-bold text-xl text-white">帳號安全</h4>
+                                        <p className="text-gray-300 text-sm">管理登入資訊和安全設定</p>
                                     </div>
                                 </CardHeader>
-                                <CardBody className="px-6 py-4">
-                                    <div className="grid grid-cols-2 gap-6">
-                                        {/* Left Column */}
-                                        <div className="space-y-4">
-                                            {/* Email */}
-                                            <div className="p-4 bg-white/5 rounded-lg">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <Mail size={16} className="text-blue-400" />
-                                                        <span className="text-gray-300 text-sm">電子郵件</span>
-                                                    </div>
-                                                    <Button
-                                                        className="custom-button-trans-override bg-white/10 text-gray-300"
-                                                        size="sm"
-                                                        onPress={onEmailModalOpen}
-                                                    >
-                                                        更改
-                                                    </Button>
+                                <CardBody className="px-6 py-6">
+                                    <div className="grid grid-cols-3 gap-6">
+                                        {/* Email */}
+                                        <div className="p-5 bg-white/5 rounded-lg">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Mail size={18} className="text-blue-400" />
+                                                    <span className="text-gray-300 text-base font-medium">電子郵件</span>
                                                 </div>
-                                                <p className="text-white font-medium">{user.email}</p>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    {user.emailVerified ? (
-                                                        <Chip color="success" size="sm" startContent={<Check size={12} />}>
-                                                            已驗證
-                                                        </Chip>
-                                                    ) : (
-                                                        <Chip color="danger" size="sm" startContent={<X size={12} />}>
+                                                <CustomButton
+                                                    variant="blur"
+                                                    size="sm"
+                                                    onPress={onEmailModalOpen}
+                                                    className="text-gray-300 hover:text-white border-white/20"
+                                                >
+                                                    更改
+                                                </CustomButton>
+                                            </div>
+                                            <p className="text-white font-medium text-base mb-3 break-all">{user.email}</p>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {user.emailVerified ? (
+                                                    <Chip color="success" size="sm" startContent={<Check size={10} />}>
+                                                        已驗證
+                                                    </Chip>
+                                                ) : (
+                                                    <>
+                                                        <Chip color="danger" size="sm" startContent={<X size={10} />}>
                                                             未驗證
                                                         </Chip>
-                                                    )}
-                                                    {!user.emailVerified && (
-                                                        <Button
-                                                            className="custom-button-trans-override text-blue-400"
+                                                        <CustomButton
+                                                            variant="blur"
                                                             size="sm"
-                                                            variant="light"
                                                             onPress={handleSendVerificationEmail}
+                                                            className="text-blue-400 hover:bg-blue-500/20"
                                                         >
-                                                            發送驗證郵件
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Password */}
-                                            <div className="p-4 bg-white/5 rounded-lg">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <Key size={16} className="text-green-400" />
-                                                        <span className="text-gray-300 text-sm">密碼</span>
-                                                    </div>
-                                                    <Button
-                                                        className="custom-button-trans-override bg-white/10 text-gray-300"
-                                                        size="sm"
-                                                        onPress={onPasswordModalOpen}
-                                                    >
-                                                        更改
-                                                    </Button>
-                                                </div>
-                                                <p className="text-white font-medium">••••••••••••</p>
-                                                <p className="text-gray-400 text-xs mt-1">最後更新：未知</p>
+                                                            驗證
+                                                        </CustomButton>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Right Column */}
-                                        <div className="space-y-4">
-                                            {/* Provider Links */}
-                                            <div className="p-4 bg-white/5 rounded-lg">
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <LinkIcon size={16} className="text-purple-400" />
-                                                    <span className="text-gray-300 text-sm">第三方服務綁定</span>
+                                        {/* Password */}
+                                        <div className="p-5 bg-white/5 rounded-lg">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Key size={18} className="text-green-400" />
+                                                    <span className="text-gray-300 text-base font-medium">密碼</span>
                                                 </div>
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-4 h-4 bg-red-500 rounded"></div>
-                                                            <span className="text-white text-sm">Google</span>
-                                                        </div>
-                                                        {isGoogleLinked() ? (
-                                                            <Button
-                                                                className="custom-button-trans-override text-red-400"
-                                                                size="sm"
-                                                                variant="light"
-                                                                onPress={() => handleUnlinkProvider('google.com')}
-                                                            >
-                                                                解除綁定
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                className="custom-button-trans-override text-green-400"
-                                                                size="sm"
-                                                                variant="light"
-                                                                onPress={() => handleLinkProvider('google.com')}
-                                                            >
-                                                                綁定
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-4 h-4 bg-gray-800 rounded"></div>
-                                                            <span className="text-white text-sm">GitHub</span>
-                                                        </div>
-                                                        {isGithubLinked() ? (
-                                                            <Button
-                                                                className="custom-button-trans-override text-red-400"
-                                                                size="sm"
-                                                                variant="light"
-                                                                onPress={() => handleUnlinkProvider('github.com')}
-                                                            >
-                                                                解除綁定
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                className="custom-button-trans-override text-green-400"
-                                                                size="sm"
-                                                                variant="light"
-                                                                onPress={() => handleLinkProvider('github.com')}
-                                                            >
-                                                                綁定
-                                                            </Button>
-                                                        )}
-                                                    </div>
+                                                <CustomButton
+                                                    variant="blur"
+                                                    size="sm"
+                                                    onPress={onPasswordModalOpen}
+                                                    className="text-gray-300 hover:text-white border-white/20"
+                                                >
+                                                    更改
+                                                </CustomButton>
+                                            </div>
+                                            <p className="text-white font-medium mb-2">••••••••••••</p>
+                                            <p className="text-gray-400 text-xs">最後更新：未知</p>
+                                        </div>
+
+                                        {/* Login History */}
+                                        <div className="p-4 bg-white/5 rounded-lg">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <History size={16} className="text-cyan-400" />
+                                                    <span className="text-gray-300 text-sm font-medium">登入紀錄</span>
+                                                </div>
+                                                <CustomButton
+                                                    variant="blur"
+                                                    size="sm"
+                                                    startContent={<ExternalLink size={12} />}
+                                                    onPress={() => {
+                                                        loadLoginHistory();
+                                                        onLoginHistoryDrawerOpen();
+                                                    }}
+                                                    className="text-gray-300 hover:text-white border-white/20"
+                                                >
+                                                    查看
+                                                </CustomButton>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="text-xs text-gray-400 flex items-center gap-1">
+                                                    <span className="text-base">{getDeviceIcon(recentLogin?.device || getDeviceInfo().device)}</span>
+                                                    {recentLogin?.device || getDeviceInfo().device}
+                                                </div>
+                                                <div className="text-xs text-gray-400">
+                                                    📍 {recentLogin?.location || "載入中..."}
                                                 </div>
                                             </div>
+                                        </div>
+                                    </div>
 
-                                            {/* Login History */}
-                                            <div className="p-4 bg-white/5 rounded-lg">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <History size={16} className="text-cyan-400" />
-                                                        <span className="text-gray-300 text-sm">登入紀錄</span>
+                                    {/* Provider Links Section */}
+                                    <div className="mt-5 p-4 bg-white/5 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <LinkIcon size={16} className="text-purple-400" />
+                                            <span className="text-gray-300 text-sm font-medium">第三方服務綁定</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+                                                        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                                                        </svg>
                                                     </div>
-                                                    <Button
-                                                        className="custom-button-trans-override bg-white/10 text-gray-300"
+                                                    <span className="text-white font-medium text-sm">Google</span>
+                                                </div>
+                                                {isGoogleLinked() ? (
+                                                    <CustomButton
+                                                        variant="blur"
                                                         size="sm"
-                                                        startContent={<ExternalLink size={14} />}
-                                                        onPress={() => {
-                                                            loadLoginHistory();
-                                                            onLoginHistoryDrawerOpen();
-                                                        }}
+                                                        onPress={() => handleUnlinkProvider('google.com')}
+                                                        className="text-red-400 hover:bg-red-500/20 border-red-500/30"
                                                     >
-                                                        查看全部
-                                                    </Button>
+                                                        解除綁定
+                                                    </CustomButton>
+                                                ) : (
+                                                    <CustomButton
+                                                        variant="blur"
+                                                        size="sm"
+                                                        onPress={() => handleLinkProvider('google.com')}
+                                                        className="text-green-400 hover:bg-green-500/20 border-green-500/30"
+                                                    >
+                                                        綁定
+                                                    </CustomButton>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
+                                                        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                                            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                                                        </svg>
+                                                    </div>
+                                                    <span className="text-white font-medium text-sm">GitHub</span>
                                                 </div>
-                                                <div className="space-y-2">
-                                                    <div className="text-xs text-gray-400">
-                                                        最近登入：{formatDate(user.metadata.lastSignInTime!)}
-                                                    </div>
-                                                    <div className="text-xs text-gray-400">
-                                                        來源：{getDeviceIcon(recentLogin?.device || getDeviceInfo().device)} {recentLogin?.device || getDeviceInfo().device}
-                                                    </div>
-                                                    <div className="text-xs text-gray-400">
-                                                        位置：{recentLogin?.location || "載入中..."}
-                                                    </div>
-                                                </div>
+                                                {isGithubLinked() ? (
+                                                    <CustomButton
+                                                        variant="blur"
+                                                        size="sm"
+                                                        onPress={() => handleUnlinkProvider('github.com')}
+                                                        className="text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                                    >
+                                                        解除綁定
+                                                    </CustomButton>
+                                                ) : (
+                                                    <CustomButton
+                                                        variant="blur"
+                                                        size="sm"
+                                                        onPress={() => handleLinkProvider('github.com')}
+                                                        className="text-green-400 hover:bg-green-500/20 border-green-500/30"
+                                                    >
+                                                        綁定
+                                                    </CustomButton>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -1083,30 +1143,32 @@ export default function Settings() {
                             {/* Danger Zone */}
                             <Card className="bg-red-950/20 backdrop-blur-sm border-red-500/30" shadow="lg">
                                 <CardHeader className="pb-2 pt-6 px-6 flex-row items-center gap-3">
-                                    <div className="bg-red-600/30 p-3 rounded-xl">
-                                        <AlertTriangle size={24} className="text-red-400" />
+                                    <div className="bg-red-600/30 p-2.5 rounded-xl">
+                                        <AlertTriangle size={22} className="text-red-400" />
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-lg text-red-300">危險區域</h4>
-                                        <p className="text-red-400/70 text-sm">這些操作無法復原，請謹慎執行</p>
+                                        <p className="text-red-400/70 text-xs">這些操作無法復原，請謹慎執行</p>
                                     </div>
                                 </CardHeader>
-                                <CardBody className="px-6 py-4">
-                                    <div className="flex gap-4">
-                                        <Button
-                                            className="custom-button-trans-override bg-red-600/20 border border-red-500/50 text-red-300"
+                                <CardBody className="px-6 py-6">
+                                    <div className="flex gap-6">
+                                        <CustomButton
+                                            variant="blur"
                                             startContent={<Trash2 size={18} />}
                                             onPress={onDeleteModalOpen}
+                                            className="bg-red-600/20 border-red-500/50 text-red-300 hover:bg-red-600/30"
                                         >
                                             刪除所有檔案
-                                        </Button>
-                                        <Button
-                                            className="custom-button-trans-override bg-red-700/30 border border-red-500/70 text-red-200"
+                                        </CustomButton>
+                                        <CustomButton
+                                            variant="blur"
                                             startContent={<UserX size={18} />}
                                             onPress={onDeleteAccountModalOpen}
+                                            className="bg-red-700/30 border-red-500/70 text-red-200 hover:bg-red-700/40"
                                         >
                                             刪除帳號
-                                        </Button>
+                                        </CustomButton>
                                     </div>
                                 </CardBody>
                             </Card>
@@ -1118,31 +1180,26 @@ export default function Settings() {
                         <div className="space-y-6">
                             {/* Profile Card - Mobile */}
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
-                                <CardHeader className="pb-2 pt-4 px-4 flex-row items-center gap-3">
-                                    <div className="bg-blue-600/30 p-2 rounded-xl">
-                                        <User size={20} className="text-blue-400" />
+                                <CardHeader className="pb-0 pt-5 px-5 flex-row items-center gap-3">
+                                    <div className="bg-blue-600/30 p-2.5 rounded-xl">
+                                        <User size={22} className="text-blue-400" />
                                     </div>
                                     <div className="flex-1">
                                         <h4 className="font-bold text-lg text-white">個人資料</h4>
-                                        <p className="text-gray-300 text-xs">管理您的基本資訊</p>
+                                        <p className="text-gray-300 text-sm">管理基本資訊</p>
                                     </div>
                                 </CardHeader>
-                                <CardBody className="px-4 py-3">
-                                    <div className="flex items-center gap-4">
+                                <CardBody className="px-5 py-5">
+                                    <div className="flex items-center gap-4 mb-5">
                                         <div className="relative">
                                             <Avatar
                                                 src={getAvatarUrl()}
-                                                className="w-16 h-16"
+                                                className="w-20 h-20"
                                                 name={user.displayName || "User"}
                                             />
-                                            <Button
-                                                isIconOnly
-                                                className="custom-button-trans-override absolute -bottom-1 -right-1 bg-blue-600 text-white"
-                                                size="sm"
-                                                radius="full"
-                                            >
-                                                <Camera size={12} />
-                                            </Button>
+                                            <div className="absolute -bottom-0.5 -right-0.5 bg-blue-600 rounded-full p-1.5">
+                                                <Camera size={12} className="text-white" />
+                                            </div>
                                         </div>
 
                                         <div className="flex-1 space-y-2">
@@ -1154,14 +1211,14 @@ export default function Settings() {
                                                     size="sm"
                                                     onPress={onNameModalOpen}
                                                 >
-                                                    <Edit size={12} />
+                                                    <Edit size={14} />
                                                 </Button>
                                             </div>
-                                            <p className="text-white font-medium">{user.displayName || "未設定"}</p>
+                                            <p className="text-white font-medium text-base">{user.displayName || "未設定"}</p>
                                         </div>
                                     </div>
 
-                                    <div className="mt-3">
+                                    <div className="custom-input-trans-animate">
                                         <CustomSelect
                                             label="頭像來源"
                                             selectedKeys={new Set([avatarSource])}
@@ -1177,75 +1234,113 @@ export default function Settings() {
                                 </CardBody>
                             </Card>
 
-                            {/* Account Stats - Mobile */}
+                            {/* Stats Card - Mobile */}
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
                                 <CardHeader className="pb-0 pt-4 px-4 flex-row items-center gap-3">
-                                    <div className="bg-green-600/30 p-2 rounded-xl">
-                                        <Calendar size={20} className="text-green-400" />
+                                    <div className="bg-purple-600/30 p-2 rounded-xl">
+                                        <ChartPie size={20} className="text-purple-400" />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-lg text-white">帳號統計</h4>
-                                        <p className="text-gray-300 text-xs">查看您的使用資料</p>
+                                        <h4 className="font-bold text-base text-white">使用統計</h4>
+                                        <p className="text-gray-300 text-xs">活動概覽</p>
                                     </div>
                                 </CardHeader>
-                                <CardBody className="px-4 py-3">
-                                    <div className="grid grid-cols-2 gap-3 mb-4">
-                                        <div className="p-3 bg-white/5 rounded-lg">
-                                            <div className="flex items-center gap-1 mb-1">
-                                                <Calendar size={12} className="text-blue-400" />
-                                                <span className="text-gray-300 text-xs">加入時間</span>
-                                            </div>
-                                            <p className="text-white font-medium text-xs">
-                                                {new Date(user.metadata.creationTime!).toLocaleDateString('zh-TW')}
-                                            </p>
-                                        </div>
-
-                                        <div className="p-3 bg-white/5 rounded-lg">
-                                            <div className="flex items-center gap-1 mb-1">
-                                                <Clock size={12} className="text-green-400" />
-                                                <span className="text-gray-300 text-xs">最後登入</span>
-                                            </div>
-                                            <p className="text-white font-medium text-xs">
-                                                {new Date(user.metadata.lastSignInTime!).toLocaleDateString('zh-TW')}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                <CardBody className="px-5 py-5">
+                                    <div className="grid grid-cols-2 gap-4 mb-5">
                                         <div className="p-3 bg-white/5 rounded-lg text-center">
-                                            <p className="text-purple-400 text-lg font-bold">23</p>
-                                            <p className="text-gray-300 text-xs">已分享檔案</p>
+                                            <Calendar size={16} className="text-blue-400 mx-auto mb-1" />
+                                            <p className="text-white font-semibold text-base">
+                                                {Math.floor((new Date().getTime() - new Date(user.metadata.creationTime!).getTime()) / (1000 * 60 * 60 * 24))}
+                                            </p>
+                                            <p className="text-gray-400 text-xs mt-0.5">加入天數</p>
                                         </div>
 
                                         <div className="p-3 bg-white/5 rounded-lg text-center">
-                                            <p className="text-orange-400 text-lg font-bold">47</p>
-                                            <p className="text-gray-300 text-xs">收到檔案</p>
+                                            <Clock size={16} className="text-green-400 mx-auto mb-1" />
+                                            <p className="text-white font-semibold text-base">
+                                                {getRelativeTime(user.metadata.lastSignInTime!)}
+                                            </p>
+                                            <p className="text-gray-400 text-xs mt-0.5">最後登入</p>
+                                        </div>
+
+                                        <div className="p-3 bg-white/5 rounded-lg text-center">
+                                            <HardDrive size={16} className="text-purple-400 mx-auto mb-1" />
+                                            <p className="text-white font-semibold text-base">23</p>
+                                            <p className="text-gray-400 text-xs mt-0.5">已分享</p>
+                                        </div>
+
+                                        <div className="p-3 bg-white/5 rounded-lg text-center">
+                                            <HardDrive size={16} className="text-orange-400 mx-auto mb-1" />
+                                            <p className="text-white font-semibold text-base">47</p>
+                                            <p className="text-gray-400 text-xs mt-0.5">已收到</p>
                                         </div>
                                     </div>
 
                                     {/* Storage - Mobile */}
-                                    <div className="p-3 bg-white/5 rounded-lg">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <ChartPie size={14} className="text-yellow-400" />
-                                            <span className="text-gray-300 text-xs">容量使用</span>
+                                    <div className="p-4 bg-white/5 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <ChartPie size={16} className="text-yellow-400" />
+                                            <span className="text-gray-300 text-sm font-medium">容量使用狀況</span>
                                         </div>
-                                        <div className="flex items-center gap-2 text-xs text-gray-200 font-medium pb-2">
-                                            <AlertTriangle size={12} className="text-amber-500" />
-                                            <span>容量即將滿載</span>
+                                        <div className="flex items-center justify-center gap-6">
+                                            {isLoadingStorage ? (
+                                                <CircularProgress
+                                                    size="lg"
+                                                    strokeWidth={4}
+                                                    aria-label="Loading storage data"
+                                                    classNames={{
+                                                        svg: "w-24 h-24 drop-shadow-lg",
+                                                        indicator: "stroke-cyan-400",
+                                                        track: "stroke-white/20"
+                                                    }}
+                                                />
+                                            ) : (
+                                                <CircularProgress
+                                                    size="lg"
+                                                    value={storageData.percentage}
+                                                    strokeWidth={4}
+                                                    showValueLabel={true}
+                                                    classNames={{
+                                                        svg: "w-24 h-24 drop-shadow-lg",
+                                                        indicator: storageData.percentage >= 90
+                                                            ? "stroke-red-500"
+                                                            : storageData.percentage >= 75
+                                                                ? "stroke-amber-500"
+                                                                : "stroke-cyan-500",
+                                                        track: "stroke-white/20",
+                                                        value: "text-xl font-bold text-white"
+                                                    }}
+                                                />
+                                            )}
+                                            <div className="flex flex-col gap-2">
+                                                <div>
+                                                    <p className="text-xs text-gray-400 mb-0.5">已使用</p>
+                                                    <p className="text-base font-semibold text-white">{storageData.formattedUsed}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-400 mb-0.5">總容量</p>
+                                                    <p className="text-base font-semibold text-gray-300">{storageData.formattedQuota}</p>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    {storageData.percentage >= 90 ? (
+                                                        <>
+                                                            <AlertTriangle size={12} className="text-red-400" />
+                                                            <span className="text-xs text-red-400">容量不足</span>
+                                                        </>
+                                                    ) : storageData.percentage >= 75 ? (
+                                                        <>
+                                                            <AlertTriangle size={12} className="text-amber-400" />
+                                                            <span className="text-xs text-amber-400">即將滿載</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Check size={12} className="text-cyan-400" />
+                                                            <span className="text-xs text-cyan-400">使用正常</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <Progress
-                                            size="sm"
-                                            radius="full"
-                                            showValueLabel
-                                            classNames={{
-                                                indicator: "bg-linear-245 from-amber-500 to-rose-700",
-                                                track: "drop-shadow-lg border border-white/30 bg-gray-900/10",
-                                                value: "text-xs font-medium text-gray-200",
-                                                label: "text-gray-300 font-normal text-xs"
-                                            }}
-                                            label="882 MB / 1 GB"
-                                            value={86}
-                                        />
                                     </div>
                                 </CardBody>
                             </Card>
@@ -1257,29 +1352,30 @@ export default function Settings() {
                                         <Shield size={20} className="text-orange-400" />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-lg text-white">帳號安全</h4>
-                                        <p className="text-gray-300 text-xs">管理登入與安全設定</p>
+                                        <h4 className="font-bold text-base text-white">帳號安全</h4>
+                                        <p className="text-gray-300 text-xs">登入與安全設定</p>
                                     </div>
                                 </CardHeader>
-                                <CardBody className="px-4 py-3">
+                                <CardBody className="px-4 py-4">
                                     <div className="space-y-3">
                                         {/* Email - Mobile */}
                                         <div className="p-3 bg-white/5 rounded-lg">
                                             <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1.5">
                                                     <Mail size={14} className="text-blue-400" />
-                                                    <span className="text-gray-300 text-xs">電子郵件</span>
+                                                    <span className="text-gray-300 text-xs font-medium">電子郵件</span>
                                                 </div>
-                                                <Button
-                                                    className="custom-button-trans-override bg-white/10 text-gray-300"
+                                                <CustomButton
+                                                    variant="blur"
                                                     size="sm"
                                                     onPress={onEmailModalOpen}
+                                                    className="text-gray-300 hover:text-white border-white/20"
                                                 >
                                                     更改
-                                                </Button>
+                                                </CustomButton>
                                             </div>
-                                            <p className="text-white font-medium text-sm mb-2">{user.email}</p>
-                                            <div className="flex items-center gap-2">
+                                            <p className="text-white font-medium text-sm mb-2 break-all">{user.email}</p>
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 {user.emailVerified ? (
                                                     <Chip color="success" size="sm" startContent={<Check size={10} />}>
                                                         已驗證
@@ -1289,14 +1385,14 @@ export default function Settings() {
                                                         <Chip color="danger" size="sm" startContent={<X size={10} />}>
                                                             未驗證
                                                         </Chip>
-                                                        <Button
-                                                            className="custom-button-trans-override text-blue-400"
+                                                        <CustomButton
+                                                            variant="blur"
                                                             size="sm"
-                                                            variant="light"
                                                             onPress={handleSendVerificationEmail}
+                                                            className="text-blue-400 hover:bg-blue-500/20"
                                                         >
                                                             驗證
-                                                        </Button>
+                                                        </CustomButton>
                                                     </>
                                                 )}
                                             </div>
@@ -1305,92 +1401,121 @@ export default function Settings() {
                                         {/* Password - Mobile */}
                                         <div className="p-3 bg-white/5 rounded-lg">
                                             <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1.5">
                                                     <Key size={14} className="text-green-400" />
-                                                    <span className="text-gray-300 text-xs">密碼</span>
+                                                    <span className="text-gray-300 text-xs font-medium">密碼</span>
                                                 </div>
-                                                <Button
-                                                    className="custom-button-trans-override bg-white/10 text-gray-300"
+                                                <CustomButton
+                                                    variant="blur"
                                                     size="sm"
                                                     onPress={onPasswordModalOpen}
+                                                    className="text-gray-300 hover:text-white border-white/20"
                                                 >
                                                     更改
-                                                </Button>
+                                                </CustomButton>
                                             </div>
-                                            <p className="text-white font-medium">••••••••••••</p>
-                                        </div>
-
-                                        {/* Providers - Mobile */}
-                                        <div className="p-3 bg-white/5 rounded-lg">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <LinkIcon size={14} className="text-purple-400" />
-                                                <span className="text-gray-300 text-xs">第三方服務</span>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-3 h-3 bg-red-500 rounded"></div>
-                                                        <span className="text-white text-xs">Google</span>
-                                                    </div>
-                                                    {isGoogleLinked() ? (
-                                                        <Chip color="success" size="sm">已綁定</Chip>
-                                                    ) : (
-                                                        <Button
-                                                            className="custom-button-trans-override text-green-400"
-                                                            size="sm"
-                                                            variant="light"
-                                                            onPress={() => handleLinkProvider('google.com')}
-                                                        >
-                                                            綁定
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-3 h-3 bg-gray-800 rounded"></div>
-                                                        <span className="text-white text-xs">GitHub</span>
-                                                    </div>
-                                                    {isGithubLinked() ? (
-                                                        <Chip color="success" size="sm">已綁定</Chip>
-                                                    ) : (
-                                                        <Button
-                                                            className="custom-button-trans-override text-green-400"
-                                                            size="sm"
-                                                            variant="light"
-                                                            onPress={() => handleLinkProvider('github.com')}
-                                                        >
-                                                            綁定
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </div>
+                                            <p className="text-white font-medium text-sm mb-1">••••••••••••</p>
+                                            <p className="text-gray-400 text-xs">最後更新：未知</p>
                                         </div>
 
                                         {/* Login History - Mobile */}
                                         <div className="p-3 bg-white/5 rounded-lg">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <div className="flex items-center gap-2">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-1.5">
                                                     <History size={14} className="text-cyan-400" />
-                                                    <span className="text-gray-300 text-xs">登入紀錄</span>
+                                                    <span className="text-gray-300 text-xs font-medium">登入紀錄</span>
                                                 </div>
-                                                <Button
-                                                    className="custom-button-trans-override text-blue-400"
+                                                <CustomButton
+                                                    variant="blur"
                                                     size="sm"
-                                                    variant="light"
                                                     onPress={() => {
                                                         loadLoginHistory();
                                                         onLoginHistoryDrawerOpen();
                                                     }}
+                                                    className="text-gray-300 hover:text-white border-white/20"
                                                 >
                                                     查看
-                                                </Button>
+                                                </CustomButton>
                                             </div>
                                             <div className="space-y-1">
-                                                <div className="text-xs text-gray-400">
-                                                    最近：{getRelativeTime(user.metadata.lastSignInTime!)}
+                                                <div className="text-xs text-gray-400 flex items-center gap-1">
+                                                    <span className="text-sm">{getDeviceIcon(recentLogin?.device || getDeviceInfo().device)}</span>
+                                                    {recentLogin?.device || getDeviceInfo().device}
                                                 </div>
                                                 <div className="text-xs text-gray-400">
-                                                    {getDeviceIcon(recentLogin?.device || getDeviceInfo().device)} {recentLogin?.device || getDeviceInfo().device}
+                                                    📍 {recentLogin?.location || "載入中..."}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Providers - Mobile */}
+                                        <div className="p-3 bg-white/5 rounded-lg">
+                                            <div className="flex items-center gap-1.5 mb-3">
+                                                <LinkIcon size={14} className="text-purple-400" />
+                                                <span className="text-gray-300 text-xs font-medium">第三方服務</span>
+                                            </div>
+                                            <div className="space-y-2.5">
+                                                <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-lg">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center flex-shrink-0">
+                                                            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                                                            </svg>
+                                                        </div>
+                                                        <span className="text-white text-xs font-medium">Google</span>
+                                                    </div>
+                                                    {isGoogleLinked() ? (
+                                                        <CustomButton
+                                                            variant="blur"
+                                                            size="sm"
+                                                            onPress={() => handleUnlinkProvider('google.com')}
+                                                            className="text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                                        >
+                                                            解除
+                                                        </CustomButton>
+                                                    ) : (
+                                                        <CustomButton
+                                                            variant="blur"
+                                                            size="sm"
+                                                            onPress={() => handleLinkProvider('google.com')}
+                                                            className="text-green-400 hover:bg-green-500/20 border-green-500/30"
+                                                        >
+                                                            綁定
+                                                        </CustomButton>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-lg">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 bg-gray-800 rounded flex items-center justify-center flex-shrink-0">
+                                                            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                                                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                                                            </svg>
+                                                        </div>
+                                                        <span className="text-white text-xs font-medium">GitHub</span>
+                                                    </div>
+                                                    {isGithubLinked() ? (
+                                                        <CustomButton
+                                                            variant="blur"
+                                                            size="sm"
+                                                            onPress={() => handleUnlinkProvider('github.com')}
+                                                            className="text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                                        >
+                                                            解除
+                                                        </CustomButton>
+                                                    ) : (
+                                                        <CustomButton
+                                                            variant="blur"
+                                                            size="sm"
+                                                            onPress={() => handleLinkProvider('github.com')}
+                                                            className="text-green-400 hover:bg-green-500/20 border-green-500/30"
+                                                        >
+                                                            綁定
+                                                        </CustomButton>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -1405,26 +1530,28 @@ export default function Settings() {
                                         <AlertTriangle size={20} className="text-red-400" />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-lg text-red-300">危險區域</h4>
+                                        <h4 className="font-bold text-base text-red-300">危險區域</h4>
                                         <p className="text-red-400/70 text-xs">操作無法復原</p>
                                     </div>
                                 </CardHeader>
-                                <CardBody className="px-4 py-3">
+                                <CardBody className="px-4 py-4">
                                     <div className="space-y-3">
-                                        <Button
-                                            className="custom-button-trans-override w-full bg-red-600/20 border border-red-500/50 text-red-300"
+                                        <CustomButton
+                                            variant="blur"
                                             startContent={<Trash2 size={16} />}
                                             onPress={onDeleteModalOpen}
+                                            className="w-full bg-red-600/20 border-red-500/50 text-red-300 hover:bg-red-600/30"
                                         >
                                             刪除所有檔案
-                                        </Button>
-                                        <Button
-                                            className="custom-button-trans-override w-full bg-red-700/30 border border-red-500/70 text-red-200"
+                                        </CustomButton>
+                                        <CustomButton
+                                            variant="blur"
                                             startContent={<UserX size={16} />}
                                             onPress={onDeleteAccountModalOpen}
+                                            className="w-full bg-red-700/30 border-red-500/70 text-red-200 hover:bg-red-700/40"
                                         >
                                             刪除帳號
-                                        </Button>
+                                        </CustomButton>
                                     </div>
                                 </CardBody>
                             </Card>
