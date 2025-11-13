@@ -12,12 +12,25 @@ import { IoAlertOutline } from "react-icons/io5";
 import DashboardNavigation from "@/components/dashboardNavigation";
 import DashboardContentTransition from "@/components/dashboardContentTransition";
 import NextLink from "next/link";
+import { useRouter } from "next/navigation";
+import { getUserStorageUsage, getStorageStatusColor } from "@/utils/storageQuota";
 
 export default function Dashboard() {
     const welcomeString = ["🌅 早安，歡迎回來！", "☀️ 午安，歡迎回來！", "🌇 晚安，近來好嗎？", "🌙 夜深了，好好休息吧！"]
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const router = useRouter();
+    const [storageData, setStorageData] = useState({
+        usedBytes: 0,
+        quotaBytes: 1024 * 1024 * 1024,
+        percentage: 0,
+        formattedUsed: "0 B",
+        formattedQuota: "1 GB",
+    });
+    const [isLoadingStorage, setIsLoadingStorage] = useState(true);
+
+    const { user, loading, logout } = useAuth();
 
     useEffect(() => {
         const checkScreenSize = () => {
@@ -29,6 +42,25 @@ export default function Dashboard() {
 
         return () => window.removeEventListener('resize', checkScreenSize);
     }, []);
+
+    // Fetch storage usage when user is available
+    useEffect(() => {
+        const fetchStorageUsage = async () => {
+            if (!user) return;
+
+            setIsLoadingStorage(true);
+            try {
+                const usage = await getUserStorageUsage();
+                setStorageData(usage);
+            } catch (error) {
+                console.error("Failed to fetch storage usage:", error);
+            } finally {
+                setIsLoadingStorage(false);
+            }
+        };
+
+        fetchStorageUsage();
+    }, [user]);
 
     const getWelcomeMessage = () => {
         const currentHour = new Date().getHours();
@@ -42,8 +74,6 @@ export default function Dashboard() {
             return welcomeString[3];
         }
     };
-
-    const { user, loading, logout } = useAuth();
 
     if (loading) {
         return (
@@ -217,7 +247,13 @@ export default function Dashboard() {
                         <>
                             {/* 第一列 */}
                             <div className="flex mb-6">
-                                <Card className=" bg-white/10 backdrop-blur-sm border-white/20 min-h-full h-[212px] max-w-[200px]" shadow="lg" isPressable isFooterBlurred>
+                                <Card
+                                    className=" bg-white/10 backdrop-blur-sm border-white/20 min-h-full h-[212px] max-w-[200px]"
+                                    shadow="lg"
+                                    isPressable
+                                    isFooterBlurred
+                                    onPress={() => router.push("/dashboard/settings")}
+                                >
                                     <div className="flex-1 relative" >
                                         <Image
                                             isZoomed
@@ -336,42 +372,51 @@ export default function Dashboard() {
                                             <h4 className="font-bold text-xl text-white">使用狀況</h4>
                                             <p className="text-gray-300 text-sm">查看你的 Share Lock 帳號使用狀況</p>
                                         </div>
-                                        <Button className="custom-button-trans-override ml-auto bg-white/10 border border-white/30 text-gray-200 shadow-2xl font-medium text-sm" radius="lg" startContent={<ExternalLink size={18} />} >
+                                        <Button
+                                            className="custom-button-trans-override ml-auto bg-white/10 border border-white/30 text-gray-200 shadow-2xl font-medium text-sm"
+                                            radius="lg"
+                                            startContent={<ExternalLink size={18} />}
+                                            onPress={() => router.push("/dashboard/files")}
+                                        >
                                             瞭解詳情
                                         </Button>
                                     </CardHeader>
                                     <CardBody className="px-6 py-6">
                                         <div className="px-4">
-                                            <div className="flex items-center gap-2 text-base align-middle text-gray-200 font-medium tracking-wider pb-3">
-                                                {true ? (
-                                                    <>
-                                                        <IoAlertOutline size={24} className="shrink-0 rounded-full bg-amber-500 p-0.5 text-zinc-900" />
-                                                        <span className="leading-none">需要注意：可用空間不足 15%</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Check size={24} className="shrink-0 rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
-                                                        <span className="leading-none">一切正常：可用空間還剩 23%</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                            <Progress
-                                                size="md"
-                                                radius="full"
-                                                showValueLabel
-                                                classNames={{
-                                                    indicator: (true
-                                                        ? "bg-linear-245 from-amber-500 to-rose-700"
-                                                        : "bg-linear-245 from-cyan-500 to-sky-600"
-                                                    ),
-                                                    track: "drop-shadow-lg border border-white/30 bg-gray-900/10",
-                                                    value: "text-2xl font-medium text-gray-200 tracking-wider leading-none",
-                                                    label: "text-gray-300 font-normal text-base relative top-2"
-                                                }}
-                                                label="882 MB / 1 GB"
-                                                value={86}
-                                            >
-                                            </Progress>
+                                            {isLoadingStorage ? (
+                                                <div className="flex items-center justify-center py-4">
+                                                    <Spinner size="lg" color="default" variant="dots" />
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="flex items-center gap-2 text-base align-middle text-gray-200 font-medium tracking-wider pb-3">
+                                                        {storageData.percentage >= 85 ? (
+                                                            <>
+                                                                <IoAlertOutline size={24} className="shrink-0 rounded-full bg-amber-500 p-0.5 text-zinc-900" />
+                                                                <span className="leading-none">需要注意：可用空間不足 {Math.round(100 - storageData.percentage)}%</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Check size={24} className="shrink-0 rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
+                                                                <span className="leading-none">一切正常：可用空間還剩 {Math.round(100 - storageData.percentage)}%</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <Progress
+                                                        size="md"
+                                                        radius="full"
+                                                        showValueLabel
+                                                        classNames={{
+                                                            indicator: getStorageStatusColor(storageData.percentage).indicator,
+                                                            track: "drop-shadow-lg border border-white/30 bg-gray-900/10",
+                                                            value: "text-2xl font-medium text-gray-200 tracking-wider leading-none",
+                                                            label: "text-gray-300 font-normal text-base relative top-2"
+                                                        }}
+                                                        label={`${storageData.formattedUsed} / ${storageData.formattedQuota}`}
+                                                        value={storageData.percentage}
+                                                    />
+                                                </>
+                                            )}
                                         </div>
                                     </CardBody>
                                 </Card>
@@ -596,40 +641,51 @@ export default function Dashboard() {
                                         <h4 className="font-bold text-lg text-white">使用狀況</h4>
                                         <p className="text-gray-300 text-xs">查看你的帳號使用狀況</p>
                                     </div>
-                                    <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
+                                    <Button
+                                        className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs"
+                                        size="sm"
+                                        radius="md"
+                                        startContent={<ExternalLink size={14} />}
+                                        onPress={() => router.push("/dashboard/files")}
+                                    >
                                         瞭解詳情
                                     </Button>
                                 </CardHeader>
                                 <CardBody className="px-6 py-6">
-                                    <div className="flex items-center gap-2 text-sm text-gray-200 font-medium pb-3">
-                                        {true ? (
-                                            <>
-                                                <IoAlertOutline size={24} className="shrink-0 rounded-full bg-amber-500 p-0.5 text-zinc-900" />
-                                                <span className="leading-none">需要注意：可用空間不足 15%</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Check size={24} className="shrink-0 rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
-                                                <span className="leading-none">一切正常：可用空間還剩 23%</span>
-                                            </>
-                                        )}
-                                    </div>
-                                    <Progress
-                                        size="md"
-                                        radius="full"
-                                        showValueLabel
-                                        classNames={{
-                                            indicator: (true
-                                                ? "bg-linear-245 from-amber-500 to-rose-700"
-                                                : "bg-linear-245 from-cyan-500 to-sky-600"
-                                            ),
-                                            track: "drop-shadow-lg border border-white/30 bg-gray-900/10",
-                                            value: "text-lg font-medium text-gray-200",
-                                            label: "text-gray-300 font-normal text-sm"
-                                        }}
-                                        label="882 MB / 1 GB"
-                                        value={86}
-                                    />
+                                    {isLoadingStorage ? (
+                                        <div className="flex items-center justify-center py-4">
+                                            <Spinner size="lg" color="default" variant="dots" />
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center gap-2 text-sm text-gray-200 font-medium pb-3">
+                                                {storageData.percentage >= 85 ? (
+                                                    <>
+                                                        <IoAlertOutline size={24} className="shrink-0 rounded-full bg-amber-500 p-0.5 text-zinc-900" />
+                                                        <span className="leading-none">需要注意：可用空間不足 {Math.round(100 - storageData.percentage)}%</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Check size={24} className="shrink-0 rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
+                                                        <span className="leading-none">一切正常：可用空間還剩 {Math.round(100 - storageData.percentage)}%</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <Progress
+                                                size="md"
+                                                radius="full"
+                                                showValueLabel
+                                                classNames={{
+                                                    indicator: getStorageStatusColor(storageData.percentage).indicator,
+                                                    track: "drop-shadow-lg border border-white/30 bg-gray-900/10",
+                                                    value: "text-lg font-medium text-gray-200",
+                                                    label: "text-gray-300 font-normal text-sm"
+                                                }}
+                                                label={`${storageData.formattedUsed} / ${storageData.formattedQuota}`}
+                                                value={storageData.percentage}
+                                            />
+                                        </>
+                                    )}
                                 </CardBody>
                             </Card>
 
