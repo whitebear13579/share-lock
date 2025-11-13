@@ -16,8 +16,6 @@ import { useRouter } from "next/navigation";
 import { getUserStorageUsage, getStorageStatusColor } from "@/utils/storageQuota";
 
 export default function Dashboard() {
-    const welcomeString = ["🌅 早安，歡迎回來！", "☀️ 午安，歡迎回來！", "🌇 晚安，近來好嗎？", "🌙 夜深了，好好休息吧！"]
-
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const router = useRouter();
@@ -61,7 +59,8 @@ export default function Dashboard() {
 
         fetchStorageUsage();
     }, [user]);
-
+    const welcomeString = ["🌅 早安，歡迎回來！", "☀️ 午安，歡迎回來！", "🌇 晚安，近來好嗎？", "🌙 夜深了，好好休息吧！"]
+    
     const getWelcomeMessage = () => {
         const currentHour = new Date().getHours();
         if (currentHour >= 5 && currentHour < 12) {
