@@ -36,15 +36,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setUser(user);
             setLoading(false);
+
+            if (!user) {
+                const currentPath = window.location.pathname;
+                const publicPaths = ['/', '/login', '/signup', '/reset-password', '/privacy-policy', '/terms-of-service', '/share'];
+                const isPublicPath = publicPaths.some(path => currentPath.startsWith(path));
+
+                if (!isPublicPath) {
+                    router.push("/login");
+                }
+            }
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [router]);
 
     const logout = async () => {
         try {
-            await signOut(auth);
             router.push("/login");
+            await signOut(auth);
         } catch (error) {
             console.error("Logout Error! This is an internal error!", error);
         }
