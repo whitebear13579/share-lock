@@ -354,6 +354,28 @@ export default function MyFiles() {
                 </Navbar>
             )}
 
+            {/* Floating Upload Button - Mobile only (outside DashboardContentTransition for proper fixed positioning) */}
+            {isMobile && (
+                <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.3, type: "spring", stiffness: 260, damping: 20 }}
+                    className="fixed bottom-6 right-6 z-50"
+                >
+                    <CustomButton
+                        variant="blur"
+                        size="lg"
+                        radius="full"
+                        isIconOnly
+                        isDisabled={loading}
+                        onPress={() => setIsUploadModalOpen(true)}
+                        className="!w-16 !h-16 !min-w-16 hover:bg-emerald-400 border backdrop-blur-md border-white/30"
+                    >
+                        <Plus size={24} className="text-green-400 group-hover:text-gray-800" />
+                    </CustomButton>
+                </motion.div>
+            )}
+
             <DashboardContentTransition>
                 {/* Main Content */}
                 <div className={isMobile ? "pt-20 px-4" : "pt-36 px-13"}>
@@ -421,28 +443,6 @@ export default function MyFiles() {
                             />
                         </div>
                     </div>
-
-                    {/* Floating Upload Button - Mobile only */}
-                    {isMobile && (
-                        <motion.div
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: 0.3, type: "spring", stiffness: 260, damping: 20 }}
-                            className="fixed bottom-6 right-6 z-50"
-                        >
-                            <CustomButton
-                                variant="blur"
-                                size="lg"
-                                radius="full"
-                                isIconOnly
-                                isDisabled={loading}
-                                onPress={() => setIsUploadModalOpen(true)}
-                                className="!w-16 !h-16 !min-w-16 hover:bg-emerald-400 border backdrop-blur-md border-white/30"
-                            >
-                                <Plus size={24} className="text-green-400 group-hover:text-gray-800" />
-                            </CustomButton>
-                        </motion.div>
-                    )}
 
                     {/* Files Grid */}
                     <AnimatePresence mode="wait">
