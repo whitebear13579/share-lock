@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/utils/authProvider";
-import { useRouter } from "next/navigation";
+import NextLink from "next/link";
 import { Button } from "@heroui/button";
 import {
     Cog,
@@ -49,6 +49,8 @@ import CustomInput from "@/components/input";
 import CustomTabs from "@/components/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import UploadFiles from "@/components/uploadFiles";
+import DashboardNavigation from "@/components/dashboardNavigation";
+import DashboardContentTransition from "@/components/dashboardContentTransition";
 
 // 模擬檔案數據
 interface FileData {
@@ -159,7 +161,6 @@ const expiredFilesData: FileData[] = [
 
 export default function MyFiles() {
     const { user, loading, logout } = useAuth();
-    const router = useRouter();
     const [activeTab, setActiveTab] = useState("myFiles");
     const [searchQuery, setSearchQuery] = useState("");
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -176,12 +177,6 @@ export default function MyFiles() {
 
         return () => window.removeEventListener("resize", checkScreenSize);
     }, []);
-
-    useEffect(() => {
-        if (!loading && !user) {
-            router.push("/login");
-        }
-    }, [user, loading, router]);
 
     if (loading) {
         return (
@@ -228,43 +223,7 @@ export default function MyFiles() {
         <div className="min-h-screen bg-linear-205 from-slate-700 to-neutral-800 to-55%">
             {/* Wide device navigation */}
             {!isMobile && (
-                <div className="absolute top-6 right-6 flex space-x-3 z-50">
-                    <div className="rounded-full border border-white/30 bg-white/10 shadow-2xl flex items-center justify-center px-6 py-2.5 space-x-10 w-fit h-12 relative overflow-visible">
-                        <div
-                            onClick={() => router.push("/dashboard")}
-                            className="text-gray-200 flex items-center gap-2 cursor-pointer hover:text-white transition-colors relative z-10"
-                        >
-                            <House size={18} />
-                            資訊主頁
-                        </div>
-                        <div className="text-gray-200 flex items-center gap-2 cursor-pointer hover:text-white transition-colors relative z-10">
-                            <Folder size={18} />
-                            我的檔案
-                            <div className="absolute -inset-x-6 -inset-y-2.5 bg-neutral-950/60 rounded-full -z-10"></div>
-                        </div>
-                        <div className="text-gray-200 flex items-center gap-2 cursor-pointer hover:text-white transition-colors relative z-10">
-                            <Cog size={18} />
-                            帳號設定
-                        </div>
-                        <div className="text-gray-200 flex items-center gap-2 cursor-pointer hover:text-white transition-colors relative z-10">
-                            <Star size={18} />
-                            漏洞有賞計畫
-                        </div>
-                    </div>
-                    <CustomButton
-                        variant="blur"
-                        size="lg"
-                        radius="full"
-                        startContent={
-                            <LogOut size={18} className="text-gray-200" />
-                        }
-                        isDisabled={loading}
-                        onPress={logout}
-                        className="text-base hover:bg-white/20 text-gray-200"
-                    >
-                        登出
-                    </CustomButton>
-                </div>
+                <DashboardNavigation loading={loading} onLogout={logout} />
             )}
 
             {/* Mobile device navigation */}
@@ -368,13 +327,12 @@ export default function MyFiles() {
 
                     <NavbarMenu className="bg-black/10 pt-6 border-t-1.5 border-white/70">
                         <NavbarMenuItem>
-                            <div
-                                onClick={() => router.push("/dashboard")}
-                                className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors cursor-pointer"
-                            >
-                                <House size={20} />
-                                <span className="text-lg">資訊主頁</span>
-                            </div>
+                            <NextLink href="/dashboard" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors">
+                                <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors cursor-pointer">
+                                    <House size={20} />
+                                    <span className="text-lg">資訊主頁</span>
+                                </div>
+                            </NextLink>
                         </NavbarMenuItem>
                         <NavbarMenuItem>
                             <div className="flex items-center gap-3 p-3 rounded-xl bg-white/20 text-blue-400">
@@ -398,290 +356,293 @@ export default function MyFiles() {
                 </Navbar>
             )}
 
-            {/* Main Content */}
-            <div className={isMobile ? "pt-20 px-4" : "pt-36 px-13"}>
-                {/* Header */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
-                    <div>
-                        <div
-                            className={`font-bold text-white mb-2 ${isMobile ? "text-2xl" : "text-4xl"
-                                }`}
-                        >
-                            我的檔案
+            <DashboardContentTransition>
+                {/* Main Content */}
+                <div className={isMobile ? "pt-20 px-4" : "pt-36 px-13"}>
+                    {/* Header */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
+                        <div>
+                            <div
+                                className={`font-bold text-white mb-2 ${isMobile ? "text-2xl" : "text-4xl"
+                                    }`}
+                            >
+                                我的檔案
+                            </div>
+                            <p
+                                className={`text-gray-300 ${isMobile ? "text-base" : "text-lg"
+                                    }`}
+                            >
+                                管理您分享的檔案與接收的檔案
+                            </p>
                         </div>
-                        <p
-                            className={`text-gray-300 ${isMobile ? "text-base" : "text-lg"
-                                }`}
-                        >
-                            管理您分享的檔案與接收的檔案
-                        </p>
                     </div>
-                </div>
 
-                {/* Tabs and Search Bar */}
-                <div className="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    {/* Tabs */}
-                    <div className="flex justify-start w-full lg:w-auto lg:space-x-3">
-                        <CustomTabs
-                            tabs={tabs}
-                            defaultTab="myFiles"
-                            onTabChange={setActiveTab}
-                            className="w-full lg:w-auto"
-                        />
-                        {/* Upload Button - Desktop only */}
-                        {!isMobile && (
+                    {/* Tabs and Search Bar */}
+                    <div className="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        {/* Tabs */}
+                        <div className="flex justify-start w-full lg:w-auto lg:space-x-3">
+                            <CustomTabs
+                                tabs={tabs}
+                                defaultTab="myFiles"
+                                onTabChange={setActiveTab}
+                                className="w-full lg:w-auto"
+                                layoutId="filesTabNavigation"
+                            />
+                            {/* Upload Button - Desktop only */}
+                            {!isMobile && (
+                                <CustomButton
+                                    variant="blur"
+                                    size="lg"
+                                    radius="full"
+                                    startContent={
+                                        <Upload
+                                            size={20}
+                                            className="text-green-400 group-hover:text-gray-800 transition-colors duration-200"
+                                        />
+                                    }
+                                    isDisabled={loading}
+                                    onPress={() => setIsUploadModalOpen(true)}
+                                    className="text-base hover:bg-emerald-400 hover:text-gray-800 text-gray-200"
+                                >
+                                    上傳檔案
+                                </CustomButton>
+                            )}
+                        </div>
+
+                        {/* Search Bar */}
+                        <div className="relative w-full lg:w-96 custom-input-trans-animate">
+                            <CustomInput
+                                size="lg"
+                                placeholder="搜尋檔案......"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full"
+                                startContent={
+                                    <Search size={18} className="text-gray-200" />
+                                }
+                            />
+                        </div>
+                    </div>
+
+                    {/* Floating Upload Button - Mobile only */}
+                    {isMobile && (
+                        <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.3, type: "spring", stiffness: 260, damping: 20 }}
+                            className="fixed bottom-6 right-6 z-50"
+                        >
                             <CustomButton
                                 variant="blur"
                                 size="lg"
                                 radius="full"
-                                startContent={
-                                    <Upload
-                                        size={20}
-                                        className="text-green-400 group-hover:text-gray-800 transition-colors duration-200"
-                                    />
-                                }
+                                isIconOnly
                                 isDisabled={loading}
                                 onPress={() => setIsUploadModalOpen(true)}
-                                className="text-base hover:bg-emerald-400 hover:text-gray-800 text-gray-200"
+                                className="!w-16 !h-16 !min-w-16 hover:bg-emerald-400 border backdrop-blur-md border-white/30"
                             >
-                                上傳檔案
+                                <Plus size={24} className="text-green-400 group-hover:text-gray-800" />
                             </CustomButton>
-                        )}
-                    </div>
+                        </motion.div>
+                    )}
 
-                    {/* Search Bar */}
-                    <div className="relative w-full lg:w-96 custom-input-trans-animate">
-                        <CustomInput
-                            size="lg"
-                            placeholder="搜尋檔案......"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full"
-                            startContent={
-                                <Search size={18} className="text-gray-200" />
-                            }
-                        />
-                    </div>
-                </div>
-
-                {/* Floating Upload Button - Mobile only */}
-                {isMobile && (
-                    <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.3, type: "spring", stiffness: 260, damping: 20 }}
-                        className="fixed bottom-6 right-6 z-50"
-                    >
-                        <CustomButton
-                            variant="blur"
-                            size="lg"
-                            radius="full"
-                            isIconOnly
-                            isDisabled={loading}
-                            onPress={() => setIsUploadModalOpen(true)}
-                            className="!w-16 !h-16 !min-w-16 hover:bg-emerald-400 border backdrop-blur-md border-white/30"
+                    {/* Files Grid */}
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="pb-16"
                         >
-                            <Plus size={24} className="text-green-400 group-hover:text-gray-800" />
-                        </CustomButton>
-                    </motion.div>
-                )}
-
-                {/* Files Grid */}
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={activeTab}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3 }}
-                        className="pb-16"
-                    >
-                        {filteredFiles.length === 0 ? (
-                            <Card className="bg-white/10 backdrop-blur-sm border-white/20">
-                                <CardBody className="py-16 text-center">
-                                    <p className="text-gray-300 text-lg">
-                                        沒有找到符合條件的檔案
-                                    </p>
-                                </CardBody>
-                            </Card>
-                        ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                                {filteredFiles.map((file, index) => (
-                                    <motion.div
-                                        key={file.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{
-                                            duration: 0.3,
-                                            delay: index * 0.1,
-                                        }}
-                                    >
-                                        <Card className="bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/15 transition-all duration-300 cursor-pointer group">
-                                            <CardHeader className="flex justify-between items-start pb-2">
-                                                <div className="flex items-start gap-3 flex-1 min-w-0">
-                                                    <div
-                                                        className={`p-3 rounded-xl ${file.status === "expired"
-                                                            ? "bg-gray-500/20"
-                                                            : "bg-blue-500/20"
-                                                            }`}
-                                                    >
-                                                        <FileText
-                                                            size={24}
-                                                            className={
-                                                                file.status === "expired"
-                                                                    ? "text-gray-400"
-                                                                    : "text-blue-400"
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h3 className="text-white font-semibold text-base truncate mb-1">
-                                                            {file.name}
-                                                        </h3>
-                                                        <p className="text-gray-400 text-sm">
-                                                            {file.size}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <Dropdown placement="bottom-end">
-                                                    <DropdownTrigger>
-                                                        <Button
-                                                            isIconOnly
-                                                            size="sm"
-                                                            variant="light"
-                                                            className="custom-button-trans-override text-gray-400 hover:text-white"
-                                                        >
-                                                            <MoreVertical size={18} />
-                                                        </Button>
-                                                    </DropdownTrigger>
-                                                    <DropdownMenu
-                                                        aria-label="檔案操作"
-                                                        className="bg-neutral-800 border-white/20 border"
-                                                    >
-                                                        <DropdownItem
-                                                            key="view"
-                                                            startContent={
-                                                                <Eye size={16} />
-                                                            }
-                                                            className="text-white"
-                                                        >
-                                                            查看詳情
-                                                        </DropdownItem>
-                                                        <DropdownItem
-                                                            key="download"
-                                                            startContent={
-                                                                <Download size={16} />
-                                                            }
-                                                            className="text-white"
-                                                        >
-                                                            下載
-                                                        </DropdownItem>
-                                                        <DropdownItem
-                                                            key="delete"
-                                                            startContent={
-                                                                <Trash2 size={16} />
-                                                            }
-                                                            className="text-red-400"
-                                                            color="danger"
-                                                        >
-                                                            刪除
-                                                        </DropdownItem>
-                                                    </DropdownMenu>
-                                                </Dropdown>
-                                            </CardHeader>
-                                            <CardBody className="pt-2">
-                                                <div className="space-y-3">
-                                                    {/* Status Chips */}
-                                                    <div className="flex flex-wrap gap-2">
-                                                        <Chip
-                                                            size="sm"
-                                                            startContent={
-                                                                file.isProtected ? (
-                                                                    <Lock size={12} />
-                                                                ) : (
-                                                                    <LockOpen size={12} />
-                                                                )
-                                                            }
-                                                            className={`text-xs text-white ${file.isProtected
-                                                                ? "bg-blue-600"
-                                                                : "bg-emerald-600"
+                            {filteredFiles.length === 0 ? (
+                                <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+                                    <CardBody className="py-16 text-center">
+                                        <p className="text-gray-300 text-lg">
+                                            沒有找到符合條件的檔案
+                                        </p>
+                                    </CardBody>
+                                </Card>
+                            ) : (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                                    {filteredFiles.map((file, index) => (
+                                        <motion.div
+                                            key={file.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{
+                                                duration: 0.3,
+                                                delay: index * 0.1,
+                                            }}
+                                        >
+                                            <Card className="bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/15 transition-all duration-300 cursor-pointer group">
+                                                <CardHeader className="flex justify-between items-start pb-2">
+                                                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                                                        <div
+                                                            className={`p-3 rounded-xl ${file.status === "expired"
+                                                                ? "bg-gray-500/20"
+                                                                : "bg-blue-500/20"
                                                                 }`}
                                                         >
-                                                            {file.isProtected
-                                                                ? "已開啟裝置綁定"
-                                                                : "未限制"}
-                                                        </Chip>
-                                                        {file.status === "expired" && (
+                                                            <FileText
+                                                                size={24}
+                                                                className={
+                                                                    file.status === "expired"
+                                                                        ? "text-gray-400"
+                                                                        : "text-blue-400"
+                                                                }
+                                                            />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h3 className="text-white font-semibold text-base truncate mb-1">
+                                                                {file.name}
+                                                            </h3>
+                                                            <p className="text-gray-400 text-sm">
+                                                                {file.size}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <Dropdown placement="bottom-end">
+                                                        <DropdownTrigger>
+                                                            <Button
+                                                                isIconOnly
+                                                                size="sm"
+                                                                variant="light"
+                                                                className="custom-button-trans-override text-gray-400 hover:text-white"
+                                                            >
+                                                                <MoreVertical size={18} />
+                                                            </Button>
+                                                        </DropdownTrigger>
+                                                        <DropdownMenu
+                                                            aria-label="檔案操作"
+                                                            className="bg-neutral-800 border-white/20 border"
+                                                        >
+                                                            <DropdownItem
+                                                                key="view"
+                                                                startContent={
+                                                                    <Eye size={16} />
+                                                                }
+                                                                className="text-white"
+                                                            >
+                                                                查看詳情
+                                                            </DropdownItem>
+                                                            <DropdownItem
+                                                                key="download"
+                                                                startContent={
+                                                                    <Download size={16} />
+                                                                }
+                                                                className="text-white"
+                                                            >
+                                                                下載
+                                                            </DropdownItem>
+                                                            <DropdownItem
+                                                                key="delete"
+                                                                startContent={
+                                                                    <Trash2 size={16} />
+                                                                }
+                                                                className="text-red-400"
+                                                                color="danger"
+                                                            >
+                                                                刪除
+                                                            </DropdownItem>
+                                                        </DropdownMenu>
+                                                    </Dropdown>
+                                                </CardHeader>
+                                                <CardBody className="pt-2">
+                                                    <div className="space-y-3">
+                                                        {/* Status Chips */}
+                                                        <div className="flex flex-wrap gap-2">
                                                             <Chip
                                                                 size="sm"
-                                                                className="text-xs text-white bg-gray-600"
+                                                                startContent={
+                                                                    file.isProtected ? (
+                                                                        <Lock size={12} />
+                                                                    ) : (
+                                                                        <LockOpen size={12} />
+                                                                    )
+                                                                }
+                                                                className={`text-xs text-white ${file.isProtected
+                                                                    ? "bg-blue-600"
+                                                                    : "bg-emerald-600"
+                                                                    }`}
                                                             >
-                                                                已過期
+                                                                {file.isProtected
+                                                                    ? "已開啟裝置綁定"
+                                                                    : "未限制"}
                                                             </Chip>
-                                                        )}
-                                                    </div>
+                                                            {file.status === "expired" && (
+                                                                <Chip
+                                                                    size="sm"
+                                                                    className="text-xs text-white bg-gray-600"
+                                                                >
+                                                                    已過期
+                                                                </Chip>
+                                                            )}
+                                                        </div>
 
-                                                    {/* Shared With */}
-                                                    {activeTab === "myFiles" &&
-                                                        file.sharedWith &&
-                                                        file.sharedWith.length > 0 && (
+                                                        {/* Shared With */}
+                                                        {activeTab === "myFiles" &&
+                                                            file.sharedWith &&
+                                                            file.sharedWith.length > 0 && (
+                                                                <div className="flex items-center gap-2">
+                                                                    <Share2
+                                                                        size={14}
+                                                                        className="text-gray-400"
+                                                                    />
+                                                                    <span className="text-sm text-gray-300">
+                                                                        分享給{" "}
+                                                                        {file.sharedWith.length}{" "}
+                                                                        位使用者
+                                                                    </span>
+                                                                </div>
+                                                            )}
+
+                                                        {/* Expiry Date */}
+                                                        <div className="flex items-center gap-2">
+                                                            <Calendar
+                                                                size={14}
+                                                                className="text-gray-400"
+                                                            />
+                                                            <span className="text-sm text-gray-300">
+                                                                {file.status === "expired"
+                                                                    ? `已於 ${file.expiryDate} 過期`
+                                                                    : `有效期至 ${file.expiryDate}`}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Stats */}
+                                                        <div className="flex items-center gap-4 pt-2 border-t border-white/10">
                                                             <div className="flex items-center gap-2">
-                                                                <Share2
+                                                                <Eye
                                                                     size={14}
                                                                     className="text-gray-400"
                                                                 />
                                                                 <span className="text-sm text-gray-300">
-                                                                    分享給{" "}
-                                                                    {file.sharedWith.length}{" "}
-                                                                    位使用者
+                                                                    {file.views} 次查看
                                                                 </span>
                                                             </div>
-                                                        )}
-
-                                                    {/* Expiry Date */}
-                                                    <div className="flex items-center gap-2">
-                                                        <Calendar
-                                                            size={14}
-                                                            className="text-gray-400"
-                                                        />
-                                                        <span className="text-sm text-gray-300">
-                                                            {file.status === "expired"
-                                                                ? `已於 ${file.expiryDate} 過期`
-                                                                : `有效期至 ${file.expiryDate}`}
-                                                        </span>
-                                                    </div>
-
-                                                    {/* Stats */}
-                                                    <div className="flex items-center gap-4 pt-2 border-t border-white/10">
-                                                        <div className="flex items-center gap-2">
-                                                            <Eye
-                                                                size={14}
-                                                                className="text-gray-400"
-                                                            />
-                                                            <span className="text-sm text-gray-300">
-                                                                {file.views} 次查看
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <Download
-                                                                size={14}
-                                                                className="text-gray-400"
-                                                            />
-                                                            <span className="text-sm text-gray-300">
-                                                                {file.downloads} 次下載
-                                                            </span>
+                                                            <div className="flex items-center gap-2">
+                                                                <Download
+                                                                    size={14}
+                                                                    className="text-gray-400"
+                                                                />
+                                                                <span className="text-sm text-gray-300">
+                                                                    {file.downloads} 次下載
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </CardBody>
-                                        </Card>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        )}
-                    </motion.div>
-                </AnimatePresence>
-            </div>
+                                                </CardBody>
+                                            </Card>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+            </DashboardContentTransition>
 
             {/* Upload Modal */}
             <UploadFiles
