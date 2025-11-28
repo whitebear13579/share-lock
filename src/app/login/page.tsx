@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import CustomButton from "@/components/button";
