@@ -1,20 +1,10 @@
-import {
-    collection,
-    addDoc,
-    query,
-    where,
-    orderBy,
-    limit,
-    getDocs,
-    serverTimestamp,
-    Timestamp
-} from 'firebase/firestore';
-import { db } from './firebase';
+import { Timestamp } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 
 export interface LoginRecord {
     id: string;
     userId: string;
+    attemptedEmail?: string;
     timestamp: Timestamp;
     device: string;
     userAgent: string;
@@ -90,15 +80,16 @@ export const recordLogin = async (
     user: User | null,
     success: boolean,
     provider?: string,
-    errorMessage?: string
+    errorMessage?: string,
+    attemptedEmail?: string
 ): Promise<void> => {
     try {
         const { device, userAgent } = getDeviceInfo();
         const { ip, location } = await getLocationInfo();
 
-        const loginRecord: Omit<LoginRecord, 'id'> = {
-            userId: user ? user.uid : 'anonymous',
-            timestamp: serverTimestamp() as Timestamp,
+        const loginData = {
+            userId: user ? user.uid : undefined,
+            attemptedEmail: attemptedEmail,
             device,
             userAgent,
             ip,
@@ -108,8 +99,20 @@ export const recordLogin = async (
             ...(errorMessage && { errorMessage })
         };
 
+        const response = await fetch('/api/auth/record-login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(loginData)
+        });
 
-        const docRef = await addDoc(collection(db, 'loginHistory'), loginRecord);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`API error: ${errorData.error || 'Unknown error'}`);
+        }
+
+        const result = await response.json();
     } catch (error) {
         console.error('Failed to record login:', error);
         if (error instanceof Error) {
@@ -123,29 +126,38 @@ export const recordLogin = async (
 
 export const getUserLoginHistory = async (
     userId: string,
+    idToken: string,
     limitCount: number = 50
 ): Promise<LoginRecord[]> => {
     try {
-        const q = query(
-            collection(db, 'loginHistory'),
-            where('userId', '==', userId),
-            orderBy('timestamp', 'desc'),
-            limit(limitCount)
-        );
-
-        const querySnapshot = await getDocs(q);
-        const records: LoginRecord[] = [];
-
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            records.push({
-                id: doc.id,
-                ...data
-            } as LoginRecord);
+        const response = await fetch(`/api/auth/login-history?limit=${limitCount}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json',
+            },
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`API error: ${errorData.error || 'Unknown error'}`);
+        }
+
+        const result = await response.json();
+
+        const records: LoginRecord[] = result.records.map((record: unknown) => {
+            const rec = record as { timestamp?: { _seconds?: number; _nanoseconds?: number } };
+            return {
+                ...(record as LoginRecord),
+                timestamp: rec.timestamp?._seconds
+                    ? new Timestamp(rec.timestamp._seconds, rec.timestamp._nanoseconds || 0)
+                    : (rec.timestamp as Timestamp)
+            };
+        });
+
         return records;
     } catch (error) {
-        console.error("Please send the following messages to the sharelock team to help us imporve stability:")
+        console.error("Please send the following messages to the sharelock team to help us improve stability:")
         console.error('Failed to get login history:', error);
 
         if (error instanceof Error) {
@@ -157,12 +169,12 @@ export const getUserLoginHistory = async (
     }
 };
 
-export const getRecentLoginRecord = async (userId: string): Promise<LoginRecord | null> => {
+export const getRecentLoginRecord = async (userId: string, idToken: string): Promise<LoginRecord | null> => {
     try {
-        const records = await getUserLoginHistory(userId, 1);
+        const records = await getUserLoginHistory(userId, idToken, 1);
         return records.length > 0 ? records[0] : null;
     } catch (error) {
-        console.error("Please send the following messages to the sharelock team to help us imporve stability:")
+        console.error("Please send the following messages to the sharelock team to help us improve stability:")
         console.error('Failed to get recent login record:', error);
         return null;
     }
