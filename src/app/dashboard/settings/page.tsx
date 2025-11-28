@@ -10,27 +10,40 @@ import {
     House,
     LogOut,
     Star,
-    User,
     Shield,
     AlertTriangle,
-    Edit,
     Mail,
     Key,
     Clock,
-    Calendar,
-    HardDrive,
     ChartPie,
-    Camera,
     ExternalLink,
     Check,
     X,
     History,
     Link as LinkIcon,
     Trash2,
-    UserX,
     Eye,
     MessageCircleQuestionMark,
-    EyeClosed
+    EyeClosed,
+    UserRound,
+    CalendarCheck,
+    FolderOutput,
+    FolderInput,
+    Info,
+    PenLine,
+    Unlink,
+    BadgePlus,
+    Send,
+    PackageX,
+    UserRoundXIcon,
+    Dot,
+    CircleAlert,
+    BadgeAlert,
+    BadgeQuestionMark,
+    AtSign,
+    Clock4,
+    Unplug,
+    ChevronLeft,
 } from "lucide-react";
 import {
     Spinner,
@@ -51,17 +64,21 @@ import {
     DropdownTrigger,
     DropdownMenu,
     DropdownItem,
-    Tooltip,
-    Drawer,
-    DrawerContent,
-    DrawerHeader,
-    DrawerBody,
-    DrawerFooter,
-    Link
+    Link,
+    Popover,
+    PopoverTrigger,
+    PopoverContent
 } from "@heroui/react";
 import CustomButton from "@/components/button";
 import CustomInput from "@/components/input";
 import { CustomSelect, CustomSelectItem } from "@/components/select";
+import {
+    CustomDrawer,
+    CustomDrawerContent,
+    CustomDrawerHeader,
+    CustomDrawerBody,
+    CustomDrawerFooter,
+} from "@/components/drawer";
 import {
     CustomModal,
     CustomModalContent,
@@ -95,6 +112,46 @@ import {
 } from "@/utils/loginHistory";
 import { Timestamp } from 'firebase/firestore';
 import { getUserStorageUsage } from "@/utils/storageQuota";
+import { IoAlertOutline } from "react-icons/io5";
+import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
+import { PiHandWaving } from "react-icons/pi";
+import { HiMiniMapPin } from "react-icons/hi2";
+
+const getFirebaseErrorMessage = (errorCode: string): string => {
+    switch (errorCode) {
+        case "auth/user-not-found":
+            return "找不到此帳號，請檢查拼字是否正確";
+        case "auth/wrong-password":
+            return "密碼錯誤";
+        case "auth/invalid-email":
+            return "電子郵件格式不正確";
+        case "auth/user-disabled":
+            return "此帳號已被停用";
+        case "auth/invalid-credential":
+            return "帳號或密碼錯誤";
+        case "auth/too-many-requests":
+            return "受到速率限制，請稍後再試";
+        case "auth/account-exists-with-different-credential":
+            return "電子郵件已使用其他方式註冊";
+        case "auth/popup-blocked":
+            return "彈出視窗遭到封鎖";
+        case "auth/cancelled-popup-request":
+            return "取消彈出視窗請求";
+        case "auth/network-request-failed":
+            return "網路連線失敗";
+        case "auth/weak-password":
+            return "密碼強度不足";
+        case "auth/email-already-in-use":
+            return "此電子郵件已被使用";
+        case "auth/operation-not-allowed":
+            return "不允許此操作";
+        case "auth/requires-recent-login":
+            return "請重新登入後再試";
+        default:
+            return "登入失敗，請稍後再試";
+    }
+};
 
 export default function Settings() {
     const { user, loading, logout } = useAuth();
@@ -115,7 +172,11 @@ export default function Settings() {
     const [isUpdating, setIsUpdating] = useState(false);
     const [avatarSource, setAvatarSource] = useState("default");
     const [deleteConfirmText, setDeleteConfirmText] = useState("");
-    const [operationResult, setOperationResult] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+    const [avatarPopover, setAvatarPopover] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' }>({ isOpen: false, message: '', type: 'success' });
+    const [namePopover, setNamePopover] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' }>({ isOpen: false, message: '', type: 'success' });
+    const [emailPopover, setEmailPopover] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' }>({ isOpen: false, message: '', type: 'success' });
+    const [passwordPopover, setPasswordPopover] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' }>({ isOpen: false, message: '', type: 'success' });
+    const [verifyEmailPopover, setVerifyEmailPopover] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' }>({ isOpen: false, message: '', type: 'success' });
 
     // Modal controls
     const { isOpen: isNameModalOpen, onOpen: onNameModalOpen, onOpenChange: onNameModalOpenChange } = useDisclosure();
@@ -140,6 +201,13 @@ export default function Settings() {
     });
     const [isLoadingStorage, setIsLoadingStorage] = useState(true);
 
+    // Statistics state
+    const [statistics, setStatistics] = useState({
+        filesShared: 0,
+        filesReceived: 0,
+    });
+    const [isLoadingStatistics, setIsLoadingStatistics] = useState(true);
+
     useEffect(() => {
         const checkScreenSize = () => {
             setIsMobile(window.innerWidth < 1536);
@@ -151,19 +219,17 @@ export default function Settings() {
         return () => window.removeEventListener('resize', checkScreenSize);
     }, []);
 
-    // 載入登入紀錄
+    // logn history loader
     const loadLoginHistory = useCallback(async () => {
         if (!user) return;
 
         setIsLoadingHistory(true);
         try {
-            console.log('Loading login history for user:', user.uid);
-            const history = await getUserLoginHistory(user.uid, 50);
-            console.log('Login history loaded:', history);
+            const idToken = await user.getIdToken();
+            const history = await getUserLoginHistory(user.uid, idToken, 50);
             setLoginHistory(history);
 
-            const recent = await getRecentLoginRecord(user.uid);
-            console.log('Recent login record:', recent);
+            const recent = await getRecentLoginRecord(user.uid, idToken);
             setRecentLogin(recent);
         } catch (error) {
             console.error('Failed to load login history:', error);
@@ -172,20 +238,47 @@ export default function Settings() {
         }
     }, [user]);
 
-    // 載入儲存空間數據
+    // user storage state loader
     const loadStorageData = useCallback(async () => {
         if (!user) return;
 
         setIsLoadingStorage(true);
         try {
-            console.log('Loading storage usage for user:', user.uid);
             const usage = await getUserStorageUsage();
-            console.log('Storage usage loaded:', usage);
             setStorageData(usage);
         } catch (error) {
             console.error('Failed to load storage usage:', error);
         } finally {
             setIsLoadingStorage(false);
+        }
+    }, [user]);
+
+    // statistics loader
+    const loadStatistics = useCallback(async () => {
+        if (!user) return;
+
+        setIsLoadingStatistics(true);
+        try {
+            const idToken = await user.getIdToken();
+            const response = await fetch('/api/statistics/overview', {
+                headers: {
+                    Authorization: `Bearer ${idToken}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch statistics');
+            }
+
+            const data = await response.json();
+            setStatistics({
+                filesShared: data.filesShared || 0,
+                filesReceived: data.filesReceived || 0,
+            });
+        } catch (error) {
+            console.error('Failed to load statistics:', error);
+        } finally {
+            setIsLoadingStatistics(false);
         }
     }, [user]);
 
@@ -228,13 +321,12 @@ export default function Settings() {
                 }
             }
 
-            // 載入登入紀錄和儲存空間數據
             loadLoginHistory();
             loadStorageData();
+            loadStatistics();
         }
-    }, [user, loading, router, loadLoginHistory, loadStorageData]);
+    }, [user, loading, router, loadLoginHistory, loadStorageData, loadStatistics]);
 
-    // Helper functions
     const formatDate = (timestamp: string | Timestamp) => {
         let date: Date;
         if (timestamp instanceof Timestamp) {
@@ -253,7 +345,7 @@ export default function Settings() {
 
     const getDeviceIcon = (device: string) => {
         if (device.includes('iPhone') || device.includes('Safari')) {
-            return "📱";
+            return "🍎";
         } else if (device.includes('Chrome')) {
             return "🌐";
         } else if (device.includes('Firefox')) {
@@ -266,6 +358,28 @@ export default function Settings() {
             return "🐧";
         } else {
             return "💻";
+        }
+    };
+
+    const getChip = (loginProvider: string) => {
+        console.log(loginProvider);
+        switch (loginProvider) {
+            case 'google':
+                return (
+                    <Chip color="primary" size="md" radius="lg" startContent={<FcGoogle size={18} className="ml-1" />} className="px-1 shadow-lg bg-white text-black" >Google</Chip>
+                );
+            case 'github':
+                return (
+                    <Chip size="md" radius="lg" startContent={<FaGithub size={18} className="ml-1" />} className="px-1 shadow-lg bg-zinc-900 text-white" >GitHub</Chip>
+                );
+            case 'email':
+                return (
+                    <Chip color="warning" size="md" radius="lg" startContent={<AtSign size={18} className="ml-1" />} className="px-1 shadow-lg" >電子郵件與密碼</Chip>
+                );
+            default:
+                return (
+                    <Chip color="secondary" size="md" radius="lg" startContent={<BadgeQuestionMark size={18} className="ml-1" />} className="px-1 shadow-lg " >未知的來源</Chip>
+                );
         }
     };
 
@@ -323,9 +437,9 @@ export default function Settings() {
         }
     };
 
+
     const handleAvatarSourceChange = async (newSource: string) => {
         try {
-            // 先計算新的頭像 URL
             let newAvatarUrl = "/undefined.png";
 
             if (!user) return;
@@ -354,20 +468,19 @@ export default function Settings() {
                     newAvatarUrl = user.photoURL || "/undefined.png";
             }
 
-            // 更新 Firebase 用戶資料
             if (newAvatarUrl !== "/undefined.png") {
                 await updateProfile(user, { photoURL: newAvatarUrl });
             }
-
-            // 更新頭像快取
             setAvatarUrl(user.uid, newAvatarUrl, newSource);
-
-            // 更新本地狀態
             setAvatarSource(newSource);
-            setOperationResult({ type: 'success', message: '頭像來源已更新！頭像快取已刷新。' });
+
+            setAvatarPopover({ isOpen: true, message: '頭像來源已更新！', type: 'success' });
+            setTimeout(() => setAvatarPopover({ isOpen: false, message: '', type: 'success' }), 3000);
         } catch (error: unknown) {
             console.error("Error updating avatar:", error);
-            setOperationResult({ type: 'error', message: '更新頭像失敗：' + (error as Error).message });
+
+            setAvatarPopover({ isOpen: true, message: '更新頭像失敗：' + (error as Error).message, type: 'error' });
+            setTimeout(() => setAvatarPopover({ isOpen: false, message: '', type: 'error' }), 3000);
         }
     };
 
@@ -376,14 +489,15 @@ export default function Settings() {
         if (!user || !displayName.trim()) return;
 
         setIsUpdating(true);
-        setOperationResult(null);
         try {
             await updateProfile(user, { displayName: displayName.trim() });
-            setOperationResult({ type: 'success', message: '使用者名稱更新成功！' });
+            setNamePopover({ isOpen: true, message: '使用者名稱已更新！', type: 'success' });
+            setTimeout(() => setNamePopover({ isOpen: false, message: '', type: 'success' }), 3000);
             onNameModalOpenChange();
         } catch (error: unknown) {
             console.error("Error updating display name:", error);
-            setOperationResult({ type: 'error', message: '更新使用者名稱失敗：' + (error as Error).message });
+            setNamePopover({ isOpen: true, message: '更新使用者名稱失敗：' + (error as Error).message, type: 'error' });
+            setTimeout(() => setNamePopover({ isOpen: false, message: '', type: 'error' }), 3000);
         } finally {
             setIsUpdating(false);
         }
@@ -393,7 +507,6 @@ export default function Settings() {
         if (!user || !newEmail.trim() || !currentPassword) return;
 
         setIsUpdating(true);
-        setOperationResult(null);
         try {
             // Reauthenticate first
             const credential = EmailAuthProvider.credential(user.email!, currentPassword);
@@ -401,20 +514,44 @@ export default function Settings() {
 
             // Update email
             await updateEmail(user, newEmail.trim());
-            setOperationResult({ type: 'success', message: '電子郵件更新成功！請檢查新郵箱進行驗證。' });
+            setEmailPopover({ isOpen: true, message: '電子郵件已更新！檢查信箱來進行驗證。', type: 'success' });
+            setTimeout(() => setEmailPopover({ isOpen: false, message: '', type: 'success' }), 3000);
             onEmailModalOpenChange();
             setCurrentPassword("");
         } catch (error: unknown) {
             console.error("Error updating email:", error);
-            let errorMessage = '更新電子郵件失敗：';
-            if ((error as FirebaseError).code === 'auth/wrong-password') {
-                errorMessage += '密碼錯誤';
-            } else if ((error as FirebaseError).code === 'auth/email-already-in-use') {
-                errorMessage += '此郵箱已被使用';
-            } else {
-                errorMessage += (error as Error).message;
+            let errorMessage = '';
+            const errorCode = (error as FirebaseError).code;
+
+            switch (errorCode) {
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
+                    errorMessage = '密碼錯誤，請重新輸入';
+                    break;
+                case 'auth/email-already-in-use':
+                    errorMessage = '此電子郵件已被使用';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = '電子郵件格式無效';
+                    break;
+                case 'auth/operation-not-allowed':
+                    errorMessage = '請先驗證電子郵件';
+                    break;
+                case 'auth/requires-recent-login':
+                    errorMessage = '請重新登入後再試';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = '操作次數過多，請稍後再試';
+                    break;
+                default:
+                    errorMessage = '發生未知錯誤，請稍後再試';
             }
-            setOperationResult({ type: 'error', message: errorMessage });
+
+            onEmailModalOpenChange();
+            setTimeout(() => {
+                setEmailPopover({ isOpen: true, message: errorMessage, type: 'error' });
+                setTimeout(() => setEmailPopover({ isOpen: false, message: '', type: 'error' }), 3000);
+            }, 100);
         } finally {
             setIsUpdating(false);
         }
@@ -424,7 +561,6 @@ export default function Settings() {
         if (!user || !currentPassword || !newPassword || newPassword !== confirmPassword) return;
 
         setIsUpdating(true);
-        setOperationResult(null);
         try {
             // Reauthenticate first
             const credential = EmailAuthProvider.credential(user.email!, currentPassword);
@@ -432,22 +568,40 @@ export default function Settings() {
 
             // Update password
             await updatePassword(user, newPassword);
-            setOperationResult({ type: 'success', message: '密碼更新成功！' });
+            setPasswordPopover({ isOpen: true, message: '密碼已更新！', type: 'success' });
+            setTimeout(() => setPasswordPopover({ isOpen: false, message: '', type: 'success' }), 3000);
             onPasswordModalOpenChange();
             setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
         } catch (error: unknown) {
             console.error("Error updating password:", error);
-            let errorMessage = '更新密碼失敗：';
-            if ((error as FirebaseError).code === 'auth/wrong-password') {
-                errorMessage += '當前密碼錯誤';
-            } else if ((error as FirebaseError).code === 'auth/weak-password') {
-                errorMessage += '新密碼強度不足';
-            } else {
-                errorMessage += (error as Error).message;
+            let errorMessage = '密碼更新失敗：';
+            const errorCode = (error as FirebaseError).code;
+
+            switch (errorCode) {
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
+                    errorMessage = '舊密碼輸入錯誤';
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = '新密碼強度不足（至少需要8個字元）';
+                    break;
+                case 'auth/requires-recent-login':
+                    errorMessage = '請重新登入後再試';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = '已達速率限制，請稍後再試';
+                    break;
+                default:
+                    errorMessage = '發生未知錯誤，請稍後再試';
             }
-            setOperationResult({ type: 'error', message: errorMessage });
+
+            onPasswordModalOpenChange();
+            setTimeout(() => {
+                setPasswordPopover({ isOpen: true, message: errorMessage, type: 'error' });
+                setTimeout(() => setPasswordPopover({ isOpen: false, message: '', type: 'error' }), 3000);
+            }, 100);
         } finally {
             setIsUpdating(false);
         }
@@ -458,10 +612,36 @@ export default function Settings() {
 
         try {
             await sendEmailVerification(user);
-            setOperationResult({ type: 'success', message: '驗證郵件已發送！請檢查您的郵箱。' });
+            requestAnimationFrame(() => {
+                setVerifyEmailPopover({ isOpen: true, message: '驗證郵件已發送！', type: 'success' });
+                setTimeout(() => setVerifyEmailPopover({ isOpen: false, message: '', type: 'success' }), 3000);
+            });
         } catch (error: unknown) {
             console.error("Error sending verification email:", error);
-            setOperationResult({ type: 'error', message: '發送驗證郵件失敗：' + (error as Error).message });
+            let errorMessage = '';
+            const errorCode = (error as FirebaseError).code;
+
+            switch (errorCode) {
+                case 'auth/too-many-requests':
+                    errorMessage = '已達速率限制，請稍後再試';
+                    break;
+                case 'auth/user-not-found':
+                    errorMessage = '找不到使用者';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = '電子郵件格式無效';
+                    break;
+                case 'auth/network-request-failed':
+                    errorMessage = '請檢查網路連線';
+                    break;
+                default:
+                    errorMessage = '發生未知錯誤，請稍後再試';
+            }
+
+            requestAnimationFrame(() => {
+                setVerifyEmailPopover({ isOpen: true, message: errorMessage, type: 'error' });
+                setTimeout(() => setVerifyEmailPopover({ isOpen: false, message: '', type: 'error' }), 3000);
+            });
         }
     };
 
@@ -479,17 +659,9 @@ export default function Settings() {
             }
 
             await linkWithPopup(user, provider);
-            setOperationResult({ type: 'success', message: '帳號綁定成功！' });
-            // You might want to refresh user data here
+            router.refresh();
         } catch (error: unknown) {
             console.error("Error linking provider:", error);
-            let errorMessage = '綁定失敗：';
-            if ((error as FirebaseError).code === 'auth/credential-already-in-use') {
-                errorMessage += '此帳號已被其他用戶使用';
-            } else {
-                errorMessage += (error as Error).message;
-            }
-            setOperationResult({ type: 'error', message: errorMessage });
         }
     };
 
@@ -499,19 +671,15 @@ export default function Settings() {
         // Check if user has other authentication methods
         const providers = user.providerData.map(p => p.providerId);
         if (providers.length <= 1 && !user.emailVerified) {
-            setOperationResult({
-                type: 'error',
-                message: '無法解除綁定：您需要至少保留一種登入方式或驗證您的電子郵件。'
-            });
+            console.error('Cannot unlink: User needs at least one auth method or verified email');
             return;
         }
 
         try {
             await unlink(user, providerId);
-            setOperationResult({ type: 'success', message: '帳號解除綁定成功！' });
+            router.refresh();
         } catch (error: unknown) {
             console.error("Error unlinking provider:", error);
-            setOperationResult({ type: 'error', message: '解除綁定失敗：' + (error as Error).message });
         }
     };
 
@@ -520,16 +688,11 @@ export default function Settings() {
 
         setIsUpdating(true);
         try {
-            // Here you would implement file deletion logic
-            // This would typically involve calling your backend API
-            // For now, we'll just simulate the operation
             await new Promise(resolve => setTimeout(resolve, 2000));
-            setOperationResult({ type: 'success', message: '所有檔案已成功刪除！' });
             onDeleteModalOpenChange();
             setDeleteConfirmText("");
         } catch (error: unknown) {
             console.error("Error deleting files:", error);
-            setOperationResult({ type: 'error', message: '刪除檔案失敗：' + (error as Error).message });
         } finally {
             setIsUpdating(false);
         }
@@ -540,36 +703,17 @@ export default function Settings() {
 
         setIsUpdating(true);
         try {
-            // Reauthenticate first
             const credential = EmailAuthProvider.credential(user.email!, currentPassword);
             await reauthenticateWithCredential(user, credential);
 
-            // Delete user
             await deleteUser(user);
             router.push("/");
         } catch (error: unknown) {
             console.error("Error deleting account:", error);
-            let errorMessage = '刪除帳號失敗：';
-            if ((error as FirebaseError).code === 'auth/wrong-password') {
-                errorMessage += '密碼錯誤';
-            } else {
-                errorMessage += (error as Error).message;
-            }
-            setOperationResult({ type: 'error', message: errorMessage });
         } finally {
             setIsUpdating(false);
         }
     };
-
-    // Clear result message after 5 seconds
-    useEffect(() => {
-        if (operationResult) {
-            const timer = setTimeout(() => {
-                setOperationResult(null);
-            }, 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [operationResult]);
 
     if (loading) {
         return (
@@ -602,22 +746,6 @@ export default function Settings() {
 
     return (
         <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55%">
-            {/* Operation Result Notification */}
-            {operationResult && (
-                <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${operationResult.type === 'success'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-red-600 text-white'
-                    }`}>
-                    <div className="flex items-center gap-2">
-                        {operationResult.type === 'success' ? (
-                            <Check size={20} />
-                        ) : (
-                            <AlertTriangle size={20} />
-                        )}
-                        <span className="text-sm">{operationResult.message}</span>
-                    </div>
-                </div>
-            )}
             {/* Wide device naviBar */}
             {!isMobile && (
                 <DashboardNavigation loading={loading} onLogout={logout} />
@@ -757,7 +885,7 @@ export default function Settings() {
                         帳號設定
                     </div>
                     <p className={`text-gray-300 ${isMobile ? "text-base" : "text-lg"}`}>
-                        管理您的個人資料、安全設定與帳號偏好
+                        您的帳號安全對我們而言至關重要。
                     </p>
                 </div>
 
@@ -769,15 +897,15 @@ export default function Settings() {
                             {/* First Row - Profile and Stats */}
                             <div className="flex gap-6">
                                 {/* Profile Card */}
-                                <Card className="bg-white/10 backdrop-blur-sm border-white/20 w-[280px]" shadow="lg">
+                                <Card className="bg-white/10 backdrop-blur-sm border-white/20 w-sm" shadow="lg">
                                     <CardHeader className="pb-0 pt-6 px-6 flex-col items-start gap-2">
                                         <div className="flex items-center gap-3 w-full">
-                                            <div className="bg-blue-600/30 p-2.5 rounded-xl">
-                                                <User size={22} className="text-blue-400" />
+                                            <div className="bg-blue-600/30 p-3 rounded-xl">
+                                                <UserRound size={24} className="text-blue-400" />
                                             </div>
                                             <div>
                                                 <h4 className="font-bold text-xl text-white">個人資料</h4>
-                                                <p className="text-gray-300 text-sm">管理基本資訊</p>
+                                                <p className="text-gray-300 text-sm">管理您的帳號基本資訊</p>
                                             </div>
                                         </div>
                                     </CardHeader>
@@ -786,40 +914,144 @@ export default function Settings() {
                                             <div className="relative">
                                                 <Avatar
                                                     src={getAvatarUrl()}
-                                                    className="w-24 h-24"
+                                                    className="w-20 h-20"
                                                     name={user.displayName || "User"}
                                                 />
-                                                <div className="absolute -bottom-1 -right-1 bg-blue-600 rounded-full p-1.5">
-                                                    <Camera size={14} className="text-white" />
-                                                </div>
                                             </div>
 
                                             <div className="w-full space-y-4">
-                                                <CustomSelect
-                                                    label="頭像來源"
-                                                    selectedKeys={new Set([avatarSource])}
-                                                    onSelectionChange={(keys) => handleAvatarSourceChange(Array.from(keys)[0] as string)}
-                                                    size="md"
-                                                    disabledKeys={disabledAvatarSources}
+                                                <Popover
+                                                    isOpen={namePopover.isOpen}
+                                                    placement="right"
+                                                    showArrow={true}
+                                                    onOpenChange={(open) => setNamePopover({ ...namePopover, isOpen: open })}
+                                                    offset={8}
+                                                    classNames={{
+                                                        base: [
+                                                            namePopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                        ],
+                                                        content: [
+                                                            namePopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                            "border-2",
+                                                        ].join(" "),
+                                                    }}
                                                 >
-                                                    <CustomSelectItem key="gravatar">Gravatar</CustomSelectItem>
-                                                    <CustomSelectItem key="google">Google</CustomSelectItem>
-                                                    <CustomSelectItem key="github">GitHub</CustomSelectItem>
-                                                </CustomSelect>
+                                                    <PopoverTrigger>
+                                                        <div className="flex items-center justify-between p-3.5 bg-white/20 hover:bg-white/30 rounded-2xl shadow-xl border border-white/30 custom-button-trans-override">
+                                                            <span className="text-white text-lg">使用者名稱</span>
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-white font-medium text-lg">{user.displayName || "未設定"}</span>
+                                                                <Button
+                                                                    isIconOnly
+                                                                    className="custom-button-trans-overrid bg-zinc-400/50 shadow-xl group"
+                                                                    size="sm"
+                                                                    radius="full"
+                                                                    onPress={onNameModalOpen}
+                                                                >
+                                                                    <PenLine size={18} className="text-neutral-900 group-hover:text-blue-500 transition-all duration-200" />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent>
+                                                        <div className="px-3 py-2">
+                                                            <div className="flex items-center gap-2">
+                                                                {namePopover.type === 'success' ? (
+                                                                    <Check size={20} className="text-white" />
+                                                                ) : (
+                                                                    <AlertTriangle size={20} className="text-white" />
+                                                                )}
+                                                                <span className="text-base text-white font-medium">{namePopover.message === "" ? "你好，打 maimai 嗎？" : namePopover.message}</span>
+                                                            </div>
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
 
-                                                <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-lg">
-                                                    <span className="text-gray-300 text-sm">使用者名稱</span>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-white font-medium text-base">{user.displayName || "未設定"}</span>
-                                                        <Button
-                                                            isIconOnly
-                                                            className="custom-button-trans-override bg-white/10 text-gray-300"
-                                                            size="sm"
-                                                            onPress={onNameModalOpen}
-                                                        >
-                                                            <Edit size={14} />
-                                                        </Button>
-                                                    </div>
+                                                <Popover
+                                                    isOpen={avatarPopover.isOpen}
+                                                    placement="right"
+                                                    showArrow={true}
+                                                    onOpenChange={(open) => setAvatarPopover({ ...avatarPopover, isOpen: open })}
+                                                    offset={8}
+                                                    classNames={{
+                                                        base: [
+                                                            avatarPopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                        ],
+                                                        content: [
+                                                            avatarPopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                            "border-2",
+                                                        ].join(" "),
+                                                        trigger: [
+                                                            "transition-all duration-200",
+                                                        ],
+                                                    }}
+                                                >
+                                                    <PopoverTrigger>
+                                                        <div>
+                                                            <CustomSelect
+                                                                label="頭像來源"
+                                                                className="custom-button-trans-override shadow-xl"
+                                                                selectedKeys={new Set([avatarSource])}
+                                                                onSelectionChange={(keys) => handleAvatarSourceChange(Array.from(keys)[0] as string)}
+                                                                size="md"
+                                                                disabledKeys={disabledAvatarSources}
+                                                                isDisabled={avatarPopover.isOpen}
+                                                            >
+                                                                <CustomSelectItem key="gravatar">Gravatar</CustomSelectItem>
+                                                                <CustomSelectItem key="google">Google</CustomSelectItem>
+                                                                <CustomSelectItem key="github">GitHub</CustomSelectItem>
+                                                            </CustomSelect>
+                                                        </div>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent>
+                                                        <div className="px-3 py-2">
+                                                            <div className="flex items-center gap-2">
+                                                                {avatarPopover.type === 'success' ? (
+                                                                    <Check size={20} className="text-white" />
+                                                                ) : (
+                                                                    <AlertTriangle size={20} className="text-white" />
+                                                                )}
+                                                                <span className="text-base text-white font-medium">{avatarPopover.message}</span>
+                                                            </div>
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
+
+
+                                                {/* Provider Links Section */}
+                                                <div className="my-3 flex items-center gap-3">
+                                                    <BadgePlus size={28} className="text-indigo-500" />
+                                                    <span className="text-gray-300 text-lg font-medium">第三方服務</span>
+                                                </div>
+                                                <div className="flex gap-3">
+                                                    <Button
+                                                        onPress={() => isGoogleLinked() ? handleUnlinkProvider('google.com') : handleLinkProvider('google.com')}
+                                                        className="bg-white flex flex-col items-center justify-center gap-2 p-3 rounded-2xl shadow-xl custom-button-trans-override cursor-pointer transition-all w-full h-fit"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <FcGoogle size={24} className="flex-shrink-0" />
+                                                            <span className="text-black font-medium text-base">Google</span>
+                                                        </div>
+                                                        <span className={`flex text-sm tracking-widest font-semibold gap-2 items-center ${isGoogleLinked() ? 'text-rose-500' : 'text-emerald-400'
+                                                            }`}>
+                                                            {isGoogleLinked() ? <Unlink size={20} /> : <LinkIcon size={20} />}
+                                                            {isGoogleLinked() ? '解除綁定' : '綁定'}
+                                                        </span>
+                                                    </Button>
+                                                    <Button
+                                                        onPress={() => isGithubLinked() ? handleUnlinkProvider('github.com') : handleLinkProvider('github.com')}
+                                                        className="bg-zinc-900 flex flex-col items-center justify-center gap-2 p-3 rounded-2xl shadow-xl custom-button-trans-override cursor-pointer transition-all w-full h-fit"
+                                                    >
+                                                        <div className="flex items-center gap-3" >
+                                                            <FaGithub size={24} className="flex-shrink-0 text-white" />
+                                                            <span className="text-white font-medium text-base" >Github</span>
+                                                        </div>
+                                                        <span className={`flex text-sm tracking-widest font-semibold gap-2 items-center ${isGithubLinked() ? 'text-rose-500' : 'text-emerald-500'
+                                                            }`}>
+                                                            {isGithubLinked() ? <Unlink size={20} /> : <LinkIcon size={20} />}
+                                                            {isGithubLinked() ? '解除綁定' : '綁定'}
+                                                        </span>
+                                                    </Button>
                                                 </div>
                                             </div>
                                         </div>
@@ -828,129 +1060,182 @@ export default function Settings() {
 
                                 {/* Stats and Storage Card */}
                                 <Card className="flex-1 bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
-                                    <CardHeader className="pb-2 pt-6 px-6 flex-row items-center gap-3">
-                                        <div className="bg-purple-600/30 p-2.5 rounded-xl">
-                                            <ChartPie size={22} className="text-purple-400" />
+                                    <CardHeader className="pb-0 pt-6 px-6 flex-row items-center gap-3">
+                                        <div className="bg-purple-600/30 p-3 rounded-xl">
+                                            <ChartPie size={24} className="text-purple-400" />
                                         </div>
                                         <div className="flex-1">
-                                            <h4 className="font-bold text-xl text-white">使用統計</h4>
-                                            <p className="text-gray-300 text-sm">您的活動概覽</p>
+                                            <h4 className="font-bold text-xl text-white">帳號使用統計</h4>
+                                            <p className="text-gray-300 text-sm">您的帳號使用量與統計資料</p>
                                         </div>
                                     </CardHeader>
                                     <CardBody className="px-6 py-6">
-                                        <div className="flex gap-6">
+                                        <div className="grid grid-cols-8 gap-6">
                                             {/* Left side - Statistics (Vertical Layout) */}
-                                            <div className="flex-1 flex flex-col gap-4">
+                                            <div className="col-span-3 flex flex-col gap-4">
                                                 {/* 加入天數 */}
-                                                <div className="p-4 bg-white/5 rounded-lg flex items-center gap-4">
+                                                <div className="p-3 bg-white/8 rounded-2xl flex items-center gap-4 shadow-xl custom-button-trans-override">
                                                     <div className="p-3 bg-blue-500/20 rounded-xl">
-                                                        <Calendar size={24} className="text-blue-400" />
+                                                        <CalendarCheck size={30} className="text-blue-400" />
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="text-gray-400 text-sm mb-1">加入天數</p>
-                                                        <p className="text-white font-bold text-2xl">
-                                                            {Math.floor((new Date().getTime() - new Date(user.metadata.creationTime!).getTime()) / (1000 * 60 * 60 * 24))}
+                                                        <p className="text-sm text-gray-300">
+                                                            從加入 Share Lock 那天起已過了......
                                                         </p>
+                                                        {loading ? (
+                                                            <Spinner size="md" color="default" variant="dots" classNames={{ wrapper: "!h-0", base: "h-8" }} />
+                                                        ) : (
+                                                            <p className="text-white font-semibold text-2xl tracking-wide">
+                                                                {Math.floor((new Date().getTime() - new Date(user.metadata.creationTime!).getTime()) / (1000 * 60 * 60 * 24))} 天
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
 
                                                 {/* 已分享 */}
-                                                <div className="p-4 bg-white/5 rounded-lg flex items-center gap-4">
+                                                <div className="p-3 bg-white/8 rounded-2xl flex items-center gap-4 shadow-xl custom-button-trans-override">
                                                     <div className="p-3 bg-purple-500/20 rounded-xl">
-                                                        <HardDrive size={24} className="text-purple-400" />
+                                                        <FolderOutput size={30} className="text-purple-400" />
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-gray-400 text-sm mb-1">已分享</p>
-                                                        <p className="text-white font-bold text-2xl">23</p>
+                                                    <div className="flex-1 transition-all duration-200">
+                                                        <p className="text-sm text-gray-300 transition-all duration-200">
+                                                            你分享的檔案數
+                                                        </p>
+                                                        {isLoadingStatistics ? (
+                                                            <Spinner size="md" color="default" variant="dots" classNames={{ wrapper: "!h-0", base: "h-8" }} />
+                                                        ) : (
+                                                            <p className="text-white font-semibold text-2xl tracking-wide">{statistics.filesShared} 個</p>
+                                                        )}
                                                     </div>
                                                 </div>
 
                                                 {/* 已收到 */}
-                                                <div className="p-4 bg-white/5 rounded-lg flex items-center gap-4">
+                                                <div className="p-3 bg-white/8 rounded-2xl flex items-center gap-4 shadow-xl custom-button-trans-override">
                                                     <div className="p-3 bg-orange-500/20 rounded-xl">
-                                                        <HardDrive size={24} className="text-orange-400" />
+                                                        <FolderInput size={30} className="text-orange-400" />
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="text-gray-400 text-sm mb-1">已收到</p>
-                                                        <p className="text-white font-bold text-2xl">47</p>
+                                                        <p className="text-sm text-gray-300">
+                                                            你收到的檔案數
+                                                        </p>
+                                                        {isLoadingStatistics ? (
+                                                            <Spinner size="md" color="default" variant="dots" classNames={{ wrapper: "!h-0", base: "h-8" }} />
+                                                        ) : (
+                                                            <p className="text-white font-semibold text-2xl tracking-wide">{statistics.filesReceived} 個</p>
+                                                        )}
                                                     </div>
                                                 </div>
 
                                                 {/* 最後登入 */}
-                                                <div className="p-4 bg-white/5 rounded-lg flex items-center gap-4">
+                                                <div className="p-3 bg-white/8 rounded-2xl flex items-center gap-4 shadow-xl custom-button-trans-override">
                                                     <div className="p-3 bg-green-500/20 rounded-xl">
-                                                        <Clock size={24} className="text-green-400" />
+                                                        <Clock size={30} className="text-green-400" />
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="text-gray-400 text-sm mb-1">最後登入</p>
-                                                        <p className="text-white font-bold text-2xl">
-                                                            {getRelativeTime(user.metadata.lastSignInTime!)}
+                                                        <p className="text-sm text-gray-300">
+                                                            最後登入時間在
                                                         </p>
+                                                        {loading ? (
+                                                            <Spinner size="md" color="default" variant="dots" classNames={{ wrapper: "!h-0", base: "h-8" }} />
+                                                        ) : (
+                                                            <p className="text-white font-semibold text-2xl tracking-widest">
+                                                                {getRelativeTime(user.metadata.lastSignInTime!)}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Right side - Storage Usage */}
-                                            <div className="flex-1 p-6 bg-white/5 rounded-lg">
-                                                <div className="flex items-center gap-2 mb-6">
-                                                    <ChartPie size={20} className="text-yellow-400" />
-                                                    <span className="text-gray-300 text-base font-medium">容量使用狀況</span>
-                                                </div>
-                                                <div className="flex flex-col items-center justify-center gap-6">
-                                                    {isLoadingStorage ? (
-                                                        <CircularProgress
-                                                            size="lg"
-                                                            strokeWidth={4}
-                                                            aria-label="Loading storage data"
-                                                            classNames={{
-                                                                svg: "w-40 h-40 drop-shadow-lg",
-                                                                indicator: "stroke-cyan-400",
-                                                                track: "stroke-white/20"
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <CircularProgress
-                                                            size="lg"
-                                                            value={storageData.percentage}
-                                                            strokeWidth={4}
-                                                            showValueLabel={true}
-                                                            classNames={{
-                                                                svg: "w-40 h-40 drop-shadow-lg",
-                                                                indicator: storageData.percentage >= 90
-                                                                    ? "stroke-red-500"
-                                                                    : storageData.percentage >= 75
-                                                                        ? "stroke-amber-500"
-                                                                        : "stroke-cyan-500",
-                                                                track: "stroke-white/20",
-                                                                value: "text-3xl font-bold text-white"
-                                                            }}
-                                                        />
-                                                    )}
-                                                    <div className="flex flex-col gap-3 w-full">
-                                                        <div className="flex items-center justify-between px-4">
-                                                            <span className="text-sm text-gray-400">已使用</span>
-                                                            <span className="text-lg font-semibold text-white">{storageData.formattedUsed}</span>
+                                            <div className="col-span-5 p-3 bg-white/8 rounded-2xl shadow-xl h-full custom-button-trans-override">
+                                                <div className="flex flex-col h-full gap-6">
+                                                    <div className="flex items-center gap-4">
+                                                        {storageData.percentage >= 85 ? (
+                                                            <div className="p-3 rounded-xl bg-amber-500/20" >
+                                                                <IoAlertOutline size={32} className="shrink-0 rounded-full bg-amber-500 p-1 text-zinc-900 drop-shadow-2xl" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="p-3 rounded-xl bg-emerald-600/40" >
+                                                                <Check size={32} className="shrink-0 rounded-full bg-emerald-500 p-1 text-zinc-900 drop-shadow-2xl" />
+                                                            </div>
+                                                        )}
+                                                        <div className="flex-1">
+                                                            <p className="text-sm text-gray-300">
+                                                                容量使用情況
+                                                            </p>
+                                                            <div className="text-white text-xl font-semibold tracking-wider">
+                                                                {storageData.percentage >= 85 ? (
+                                                                    <span>需要注意：可用空間剩下 {Math.round(100 - storageData.percentage)}%</span>
+                                                                ) : (
+                                                                    <span>一切正常：可用空間還剩 {Math.round(100 - storageData.percentage)}%</span>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                        <div className="flex items-center justify-between px-4">
-                                                            <span className="text-sm text-gray-400">總容量</span>
-                                                            <span className="text-lg font-semibold text-gray-300">{storageData.formattedQuota}</span>
+                                                    </div>
+                                                    <div className="flex-1 flex items-center justify-between px-8">
+                                                        <div className="flex flex-col gap-4 flex-1 max-w-lg">
+                                                            <div className="space-y-6">
+                                                                <div className="flex items-baseline justify-between border-b border-white/10 pb-3">
+                                                                    <span className="text-gray-400 text-lg">已使用</span>
+                                                                    <span className="text-white font-semibold text-xl tracking-wider">{storageData.formattedUsed}</span>
+                                                                </div>
+                                                                <div className="flex items-baseline justify-between border-b border-white/10 pb-3">
+                                                                    <span className="text-gray-400 text-lg">剩餘可用</span>
+                                                                    <span className="text-white font-semibold text-xl tracking-wider">
+                                                                        {(() => {
+                                                                            const usedBytes = storageData.usedBytes;
+                                                                            const quotaBytes = storageData.quotaBytes;
+                                                                            const remainingBytes = quotaBytes - usedBytes;
+                                                                            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+                                                                            let size = remainingBytes;
+                                                                            let unitIndex = 0;
+                                                                            while (size >= 1024 && unitIndex < units.length - 1) {
+                                                                                size /= 1024;
+                                                                                unitIndex++;
+                                                                            }
+                                                                            return `${size.toFixed(2)} ${units[unitIndex]}`;
+                                                                        })()}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-baseline justify-between border-b border-white/10 pb-3">
+                                                                    <span className="text-gray-400 text-lg">總容量</span>
+                                                                    <span className="text-white font-semibold text-xl tracking-wider">{storageData.formattedQuota}</span>
+                                                                </div>
+                                                            </div>
+                                                            <span className="text-gray-400 text-sm mt--6 flex gap-3 items-center text-justify">
+                                                                <Info size={24} className="shrink-0" /> 容量計算可能因您所處的地區或網路連線狀況而有所延遲。
+                                                            </span>
                                                         </div>
-                                                        <div className="flex items-center justify-center gap-2 mt-2">
-                                                            {storageData.percentage >= 90 ? (
-                                                                <>
-                                                                    <AlertTriangle size={16} className="text-red-400" />
-                                                                    <span className="text-sm text-red-400 font-medium">容量不足</span>
-                                                                </>
-                                                            ) : storageData.percentage >= 75 ? (
-                                                                <>
-                                                                    <AlertTriangle size={16} className="text-amber-400" />
-                                                                    <span className="text-sm text-amber-400 font-medium">即將滿載</span>
-                                                                </>
+                                                        <div className="flex items-center justify-center pl-12">
+                                                            {isLoadingStorage ? (
+                                                                <CircularProgress
+                                                                    size="lg"
+                                                                    strokeWidth={2}
+                                                                    aria-label="Loading storage data"
+                                                                    classNames={{
+                                                                        svg: "w-56 h-56 drop-shadow-2xl",
+                                                                        indicator: "stroke-cyan-400",
+                                                                        track: "stroke-white/20"
+                                                                    }}
+                                                                />
                                                             ) : (
-                                                                <>
-                                                                    <Check size={16} className="text-cyan-400" />
-                                                                    <span className="text-sm text-cyan-400 font-medium">使用正常</span>
-                                                                </>
+                                                                <CircularProgress
+                                                                    size="lg"
+                                                                    value={storageData.percentage}
+                                                                    strokeWidth={2}
+                                                                    showValueLabel={true}
+                                                                    aria-label="Storage usage"
+                                                                    classNames={{
+                                                                        svg: "w-56 h-56 drop-shadow-2xl",
+                                                                        indicator: storageData.percentage >= 90
+                                                                            ? "stroke-red-500"
+                                                                            : storageData.percentage >= 75
+                                                                                ? "stroke-amber-500"
+                                                                                : "stroke-cyan-500",
+                                                                        track: "stroke-white/20",
+                                                                        value: "text-4xl font-semibold text-white tracking-widest"
+                                                                    }}
+                                                                />
                                                             )}
                                                         </div>
                                                     </div>
@@ -964,8 +1249,8 @@ export default function Settings() {
                             {/* Second Row - Security Settings */}
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
                                 <CardHeader className="pb-2 pt-6 px-6 flex-row items-center gap-3">
-                                    <div className="bg-orange-600/30 p-2.5 rounded-xl">
-                                        <Shield size={22} className="text-orange-400" />
+                                    <div className="bg-orange-600/30 p-3 rounded-xl">
+                                        <Shield size={24} className="text-orange-400" />
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-xl text-white">帳號安全</h4>
@@ -975,165 +1260,208 @@ export default function Settings() {
                                 <CardBody className="px-6 py-6">
                                     <div className="grid grid-cols-3 gap-6">
                                         {/* Email */}
-                                        <div className="p-5 bg-white/5 rounded-lg">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Mail size={18} className="text-blue-400" />
-                                                    <span className="text-gray-300 text-base font-medium">電子郵件</span>
-                                                </div>
-                                                <CustomButton
-                                                    variant="blur"
-                                                    size="sm"
-                                                    onPress={onEmailModalOpen}
-                                                    className="text-gray-300 hover:text-white border-white/20"
-                                                >
-                                                    更改
-                                                </CustomButton>
-                                            </div>
-                                            <p className="text-white font-medium text-base mb-3 break-all">{user.email}</p>
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                {user.emailVerified ? (
-                                                    <Chip color="success" size="sm" startContent={<Check size={10} />}>
-                                                        已驗證
-                                                    </Chip>
-                                                ) : (
-                                                    <>
-                                                        <Chip color="danger" size="sm" startContent={<X size={10} />}>
-                                                            未驗證
-                                                        </Chip>
+                                        <Popover
+                                            isOpen={emailPopover.isOpen}
+                                            placement="top"
+                                            showArrow={true}
+                                            onOpenChange={(open) => setEmailPopover({ ...emailPopover, isOpen: open })}
+                                            offset={8}
+                                            classNames={{
+                                                base: [
+                                                    emailPopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                ],
+                                                content: [
+                                                    emailPopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                    "border-2",
+                                                ].join(" "),
+                                            }}
+                                        >
+                                            <div className="p-5 bg-white/8 rounded-2xl shadow-xl custom-button-trans-override">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="bg-cyan-600/30 p-3 rounded-full">
+                                                            <Mail size={24} className="text-cyan-400" />
+                                                        </div>
+                                                        <span className="text-white text-lg tracking-wider">
+                                                            電子郵件
+                                                        </span>
+                                                    </div>
+                                                    <PopoverTrigger>
                                                         <CustomButton
                                                             variant="blur"
-                                                            size="sm"
-                                                            onPress={handleSendVerificationEmail}
-                                                            className="text-blue-400 hover:bg-blue-500/20"
+                                                            size="md"
+                                                            onPress={onEmailModalOpen}
+                                                            className="text-gray-300 hover:text-white border-white/20 text-base"
+                                                            startContent={
+                                                                <PenLine size={18} className="flex-shrink-0" />
+                                                            }
                                                         >
-                                                            驗證
+                                                            變更
                                                         </CustomButton>
-                                                    </>
-                                                )}
+                                                    </PopoverTrigger>
+                                                </div>
+                                                <p className="text-white font-medium text-lg mb-4 pl-2 break-all">{user.email}</p>
+                                                <Popover
+                                                    isOpen={verifyEmailPopover.isOpen && !!verifyEmailPopover.message}
+                                                    placement="bottom"
+                                                    showArrow={true}
+                                                    onOpenChange={(open) => setVerifyEmailPopover({ ...verifyEmailPopover, isOpen: open })}
+                                                    offset={8}
+                                                    classNames={{
+                                                        base: [
+                                                            verifyEmailPopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                        ],
+                                                        content: [
+                                                            verifyEmailPopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                            "border-2",
+                                                        ].join(" "),
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2 flex-wrap pl-2">
+                                                        {user.emailVerified ? (
+                                                            <Chip size="md" startContent={<Check size={18} className="flex-shrink-0" />} className="text-zinc-800 text-sm p-2 bg-emerald-500 h-8" >
+                                                                已驗證
+                                                            </Chip>
+                                                        ) : (
+                                                            <>
+                                                                <Chip size="md" startContent={<X size={18} className="flex-shrink-0" />} className="text-white bg-rose-500 text-sm p-2 h-8">
+                                                                    未驗證
+                                                                </Chip>
+                                                                <PopoverTrigger>
+                                                                    <CustomButton
+                                                                        variant="blur"
+                                                                        size="sm"
+                                                                        radius="full"
+                                                                        onPress={handleSendVerificationEmail}
+                                                                        className="text-sky-400 text-sm font-medium"
+                                                                        startContent={
+                                                                            <Send size={18} className="flex-shrink-0" />
+                                                                        }
+                                                                    >
+                                                                        發送驗證信
+                                                                    </CustomButton>
+                                                                </PopoverTrigger>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <PopoverContent>
+                                                        <div className="px-3 py-2">
+                                                            <div className="flex items-center gap-2">
+                                                                {verifyEmailPopover.type === 'success' ? (
+                                                                    <Check size={20} className="text-white" />
+                                                                ) : (
+                                                                    <AlertTriangle size={20} className="text-white" />
+                                                                )}
+                                                                <span className="text-base text-white font-medium">{verifyEmailPopover.message}</span>
+                                                            </div>
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
-                                        </div>
+                                            <PopoverContent>
+                                                <div className="px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        {emailPopover.type === 'success' ? (
+                                                            <Check size={20} className="text-white" />
+                                                        ) : (
+                                                            <AlertTriangle size={20} className="text-white" />
+                                                        )}
+                                                        <span className="text-base text-white font-medium">{emailPopover.message}</span>
+                                                    </div>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
 
                                         {/* Password */}
-                                        <div className="p-5 bg-white/5 rounded-lg">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Key size={18} className="text-green-400" />
-                                                    <span className="text-gray-300 text-base font-medium">密碼</span>
+                                        <Popover
+                                            isOpen={passwordPopover.isOpen}
+                                            placement="top"
+                                            showArrow={true}
+                                            onOpenChange={(open) => setPasswordPopover({ ...passwordPopover, isOpen: open })}
+                                            offset={8}
+                                            classNames={{
+                                                base: [
+                                                    passwordPopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                ],
+                                                content: [
+                                                    passwordPopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                    "border-2",
+                                                ].join(" "),
+                                            }}
+                                        >
+                                            <div className="p-5 bg-white/8 rounded-2xl shadow-xl custom-button-trans-override">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="bg-teal-600/30 p-3 rounded-full" >
+                                                            <Key size={24} className="text-teal-500" />
+                                                        </div>
+                                                        <span className="text-white text-lg tracking-wdier" >
+                                                            密碼
+                                                        </span>
+                                                    </div>
+                                                    <PopoverTrigger>
+                                                        <CustomButton
+                                                            variant="blur"
+                                                            size="md"
+                                                            onPress={onPasswordModalOpen}
+                                                            className="text-gray-300 hover:text-white border-white/20 text-base"
+                                                            startContent={
+                                                                <PenLine size={18} className="flex-shrink-0" />
+                                                            }
+                                                        >
+                                                            變更
+                                                        </CustomButton>
+                                                    </PopoverTrigger>
                                                 </div>
-                                                <CustomButton
-                                                    variant="blur"
-                                                    size="sm"
-                                                    onPress={onPasswordModalOpen}
-                                                    className="text-gray-300 hover:text-white border-white/20"
-                                                >
-                                                    更改
-                                                </CustomButton>
+                                                <p className="text-white font-medium text-lg mb-4 pl-2 tracking-widest">••••••••••••••••</p>
+                                                <div className="flex items-center gap-2 pl-2">
+                                                    <Chip size="md" startContent={<Info size={18} className="flex-shrink-0 mr-1" />} className="text-zinc-800 text-sm p-2 h-8 bg-sky-400" >請定期更新密碼來確保帳號安全</Chip>
+                                                </div>
                                             </div>
-                                            <p className="text-white font-medium mb-2">••••••••••••</p>
-                                            <p className="text-gray-400 text-xs">最後更新：未知</p>
-                                        </div>
+                                            <PopoverContent>
+                                                <div className="px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        {passwordPopover.type === 'success' ? (
+                                                            <Check size={20} className="text-white" />
+                                                        ) : (
+                                                            <AlertTriangle size={20} className="text-white" />
+                                                        )}
+                                                        <span className="text-base text-white font-medium">{passwordPopover.message}</span>
+                                                    </div>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
 
                                         {/* Login History */}
-                                        <div className="p-4 bg-white/5 rounded-lg">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <History size={16} className="text-cyan-400" />
-                                                    <span className="text-gray-300 text-sm font-medium">登入紀錄</span>
+                                        <div className="p-5 bg-white/8 rounded-2xl shadow-xl custom-button-trans-override">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-indigo-500/30 p-3 rounded-full" >
+                                                        <History size={24} className="text-indigo-400" />
+                                                    </div>
+                                                    <span className="text-white text-lg tracking-wider">
+                                                        登入紀錄
+                                                    </span>
                                                 </div>
                                                 <CustomButton
                                                     variant="blur"
-                                                    size="sm"
-                                                    startContent={<ExternalLink size={12} />}
+                                                    size="md"
+                                                    startContent={<ExternalLink size={18} className="flex-shrink-0" />}
                                                     onPress={() => {
                                                         loadLoginHistory();
                                                         onLoginHistoryDrawerOpen();
                                                     }}
-                                                    className="text-gray-300 hover:text-white border-white/20"
+                                                    className="text-gray-300 hover:text-white border-white/20 text-base"
                                                 >
                                                     查看
                                                 </CustomButton>
                                             </div>
-                                            <div className="space-y-1">
-                                                <div className="text-xs text-gray-400 flex items-center gap-1">
-                                                    <span className="text-base">{getDeviceIcon(recentLogin?.device || getDeviceInfo().device)}</span>
-                                                    {recentLogin?.device || getDeviceInfo().device}
+                                            <div className="space-y-1 pl-2">
+                                                <div className="text-base text-white font-medium flex flex-col gap-1 tracking-wider" >
+                                                    <span>🕓 {recentLogin ? formatDate(recentLogin.timestamp) : "載入中..."}</span>
+                                                    <span>{getDeviceIcon(recentLogin?.device || getDeviceInfo().device)} {recentLogin?.device || getDeviceInfo().device}</span>
+                                                    <span>📍 {recentLogin?.location || "載入中..."}</span>
                                                 </div>
-                                                <div className="text-xs text-gray-400">
-                                                    📍 {recentLogin?.location || "載入中..."}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Provider Links Section */}
-                                    <div className="mt-5 p-4 bg-white/5 rounded-lg">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <LinkIcon size={16} className="text-purple-400" />
-                                            <span className="text-gray-300 text-sm font-medium">第三方服務綁定</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-                                                        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                                                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                                                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                                                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                                                        </svg>
-                                                    </div>
-                                                    <span className="text-white font-medium text-sm">Google</span>
-                                                </div>
-                                                {isGoogleLinked() ? (
-                                                    <CustomButton
-                                                        variant="blur"
-                                                        size="sm"
-                                                        onPress={() => handleUnlinkProvider('google.com')}
-                                                        className="text-red-400 hover:bg-red-500/20 border-red-500/30"
-                                                    >
-                                                        解除綁定
-                                                    </CustomButton>
-                                                ) : (
-                                                    <CustomButton
-                                                        variant="blur"
-                                                        size="sm"
-                                                        onPress={() => handleLinkProvider('google.com')}
-                                                        className="text-green-400 hover:bg-green-500/20 border-green-500/30"
-                                                    >
-                                                        綁定
-                                                    </CustomButton>
-                                                )}
-                                            </div>
-
-                                            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
-                                                        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                                            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-                                                        </svg>
-                                                    </div>
-                                                    <span className="text-white font-medium text-sm">GitHub</span>
-                                                </div>
-                                                {isGithubLinked() ? (
-                                                    <CustomButton
-                                                        variant="blur"
-                                                        size="sm"
-                                                        onPress={() => handleUnlinkProvider('github.com')}
-                                                        className="text-red-400 hover:bg-red-500/20 border-red-500/30"
-                                                    >
-                                                        解除綁定
-                                                    </CustomButton>
-                                                ) : (
-                                                    <CustomButton
-                                                        variant="blur"
-                                                        size="sm"
-                                                        onPress={() => handleLinkProvider('github.com')}
-                                                        className="text-green-400 hover:bg-green-500/20 border-green-500/30"
-                                                    >
-                                                        綁定
-                                                    </CustomButton>
-                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -1141,34 +1469,66 @@ export default function Settings() {
                             </Card>
 
                             {/* Danger Zone */}
-                            <Card className="bg-red-950/20 backdrop-blur-sm border-red-500/30" shadow="lg">
+                            <Card className="bg-red-500/20 backdrop-blur-sm" shadow="lg">
                                 <CardHeader className="pb-2 pt-6 px-6 flex-row items-center gap-3">
-                                    <div className="bg-red-600/30 p-2.5 rounded-xl">
-                                        <AlertTriangle size={22} className="text-red-400" />
+                                    <div className="bg-red-600/20 p-3 rounded-xl">
+                                        <AlertTriangle size={24} className="text-rose-400" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-lg text-red-300">危險區域</h4>
-                                        <p className="text-red-400/70 text-xs">這些操作無法復原，請謹慎執行</p>
+                                        <h4 className="font-bold text-lg text-red-200">危險區域</h4>
+                                        <p className="text-rose-300 text-sm">這些操作無法復原，請謹慎執行</p>
                                     </div>
                                 </CardHeader>
                                 <CardBody className="px-6 py-6">
-                                    <div className="flex gap-6">
-                                        <CustomButton
-                                            variant="blur"
-                                            startContent={<Trash2 size={18} />}
-                                            onPress={onDeleteModalOpen}
-                                            className="bg-red-600/20 border-red-500/50 text-red-300 hover:bg-red-600/30"
-                                        >
-                                            刪除所有檔案
-                                        </CustomButton>
-                                        <CustomButton
-                                            variant="blur"
-                                            startContent={<UserX size={18} />}
-                                            onPress={onDeleteAccountModalOpen}
-                                            className="bg-red-700/30 border-red-500/70 text-red-200 hover:bg-red-700/40"
-                                        >
-                                            刪除帳號
-                                        </CustomButton>
+                                    <div className="grid grid-cols-3 gap-6">
+                                        <div className="relative p-5 bg-white/8 rounded-2xl shadow-2xl custom-button-trans-override overflow-hidden flex flex-col">
+                                            <PackageX size={140} className="absolute -top-14 -left-9 text-red-400 opacity-30" style={{ mixBlendMode: 'normal' }} />
+                                            <div className="flex items-center justify-between mb-3 relative z-10">
+                                                <div className="flex items-center gap-3 pl-2">
+                                                    <span className="text-red-200 text-xl tracking-widest font-semibold">
+                                                        刪除所有檔案
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <p className="text-white font-medium flex-wrap text-justify text-base mb-4 pl-2 relative z-10 flex-1">永久刪除所有已上傳的檔案，此操作無法復原。</p>
+                                            <div className="flex justify-end relative z-10">
+                                                <CustomButton
+                                                    variant="blur"
+                                                    size="md"
+                                                    onPress={onDeleteModalOpen}
+                                                    className="text-red-400  border-red-500/50 border-2 text-base"
+                                                    startContent={
+                                                        <Trash2 size={18} className="flex-shrink-0" />
+                                                    }
+                                                >
+                                                    刪除
+                                                </CustomButton>
+                                            </div>
+                                        </div>
+                                        <div className="relative p-5 bg-white/8 rounded-2xl shadow-2xl custom-button-trans-override overflow-hidden flex flex-col">
+                                            <UserRoundXIcon size={140} className="absolute -top-14 -left-9 text-red-400 opacity-30" style={{ mixBlendMode: 'normal' }} />
+                                            <div className="flex items-center justify-between mb-3 relative z-10">
+                                                <div className="flex items-center gap   -3 pl-2">
+                                                    <span className="text-red-200 text-xl tracking-widest font-semibold">
+                                                        刪除帳號
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <p className="text-white font-medium flex-wrap text-justify text-base mb-4 pl-2 relative z-10 flex-1">永久刪除這個帳號，跟 Share Lock 說再見。</p>
+                                            <div className="flex justify-end relative z-10">
+                                                <CustomButton
+                                                    variant="blur"
+                                                    size="md"
+                                                    onPress={onDeleteAccountModalOpen}
+                                                    className="text-red-400  border-red-500/50 border-2 text-base"
+                                                    startContent={
+                                                        <PiHandWaving size={18} className="flex-shrink-0" />
+                                                    }
+                                                >
+                                                    バイバイ
+                                                </CustomButton>
+                                            </div>
+                                        </div>
                                     </div>
                                 </CardBody>
                             </Card>
@@ -1180,165 +1540,356 @@ export default function Settings() {
                         <div className="space-y-6">
                             {/* Profile Card - Mobile */}
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
-                                <CardHeader className="pb-0 pt-5 px-5 flex-row items-center gap-3">
-                                    <div className="bg-blue-600/30 p-2.5 rounded-xl">
-                                        <User size={22} className="text-blue-400" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-bold text-lg text-white">個人資料</h4>
-                                        <p className="text-gray-300 text-sm">管理基本資訊</p>
+                                <CardHeader className="pb-2 pt-4 px-4 flex-row items-center gap-3">
+                                    <div className="flex items-center gap-3 w-full">
+                                        <div className="bg-blue-600/30 p-2 rounded-xl">
+                                            <UserRound size={24} className="text-blue-400" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-base text-white">個人資料</h4>
+                                            <p className="text-gray-300 text-xs">管理您的帳號基本資訊</p>
+                                        </div>
                                     </div>
                                 </CardHeader>
-                                <CardBody className="px-5 py-5">
-                                    <div className="flex items-center gap-4 mb-5">
+                                <CardBody className="px-4 py-4">
+                                    <div className="flex flex-col items-center space-y-5">
                                         <div className="relative">
                                             <Avatar
                                                 src={getAvatarUrl()}
-                                                className="w-20 h-20"
+                                                className="w-18 h-18"
                                                 name={user.displayName || "User"}
                                             />
-                                            <div className="absolute -bottom-0.5 -right-0.5 bg-blue-600 rounded-full p-1.5">
-                                                <Camera size={12} className="text-white" />
-                                            </div>
                                         </div>
 
-                                        <div className="flex-1 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-gray-300 text-sm">使用者名稱</span>
+                                        <div className="w-full space-y-3">
+                                            <Popover
+                                                isOpen={namePopover.isOpen}
+                                                placement="bottom"
+                                                showArrow={true}
+                                                onOpenChange={(open) => setNamePopover({ ...namePopover, isOpen: open })}
+                                                offset={8}
+                                                classNames={{
+                                                    base: [
+                                                        namePopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                    ],
+                                                    content: [
+                                                        namePopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                        "border-2",
+                                                    ].join(" "),
+                                                }}
+                                            >
+                                                <PopoverTrigger>
+                                                    <div className="flex items-center justify-between p-3.5 bg-white/20 hover:bg-white/30 rounded-2xl shadow-xl border border-white/30 transition-all duration-200 h-14">
+                                                        <span className="text-white text-base">使用者名稱</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-white font-medium text-base">{user.displayName || "未設定"}</span>
+                                                            <Button
+                                                                isIconOnly
+                                                                className="custom-button-trans-override bg-zinc-400/50 shadow-xl group"
+                                                                size="sm"
+                                                                radius="full"
+                                                                onPress={onNameModalOpen}
+                                                            >
+                                                                <PenLine size={18} className="text-neutral-900 group-hover:text-blue-500 transition-all duration-200" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </PopoverTrigger>
+                                                <PopoverContent>
+                                                    <div className="px-3 py-2">
+                                                        <div className="flex items-center gap-2">
+                                                            {namePopover.type === 'success' ? (
+                                                                <Check size={20} className="text-white" />
+                                                            ) : (
+                                                                <AlertTriangle size={20} className="text-white" />
+                                                            )}
+                                                            <span className="text-base text-white font-medium">{namePopover.message === "" ? "你好，打 maimai 嗎？" : namePopover.message}</span>
+                                                        </div>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+
+                                            <Popover
+                                                isOpen={avatarPopover.isOpen}
+                                                placement="bottom"
+                                                showArrow={true}
+                                                onOpenChange={(open) => setAvatarPopover({ ...avatarPopover, isOpen: open })}
+                                                offset={8}
+                                                classNames={{
+                                                    base: [
+                                                        avatarPopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                    ],
+                                                    content: [
+                                                        avatarPopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                        "border-2",
+                                                    ].join(" "),
+                                                    trigger: [
+                                                        "transition-all duration-200",
+                                                    ],
+                                                }}
+                                            >
+                                                <PopoverTrigger>
+                                                    <div>
+                                                        <CustomSelect
+                                                            label="頭像來源"
+                                                            className="custom-button-trans-override shadow-xl"
+                                                            selectedKeys={new Set([avatarSource])}
+                                                            onSelectionChange={(keys) => handleAvatarSourceChange(Array.from(keys)[0] as string)}
+                                                            size="md"
+                                                            disabledKeys={disabledAvatarSources}
+                                                            isDisabled={avatarPopover.isOpen}
+                                                        >
+                                                            <CustomSelectItem key="gravatar">Gravatar</CustomSelectItem>
+                                                            <CustomSelectItem key="google">Google</CustomSelectItem>
+                                                            <CustomSelectItem key="github">GitHub</CustomSelectItem>
+                                                        </CustomSelect>
+                                                    </div>
+                                                </PopoverTrigger>
+                                                <PopoverContent>
+                                                    <div className="px-3 py-2">
+                                                        <div className="flex items-center gap-2">
+                                                            {avatarPopover.type === 'success' ? (
+                                                                <Check size={20} className="text-white" />
+                                                            ) : (
+                                                                <AlertTriangle size={20} className="text-white" />
+                                                            )}
+                                                            <span className="text-base text-white font-medium">{avatarPopover.message == "" ? "你好，打 maimai 嗎？" : avatarPopover.message}</span>
+                                                        </div>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+
+
+                                            {/* Provider Links Section */}
+                                            <div className="my-4 flex items-center gap-3">
+                                                <BadgePlus size={28} className="text-indigo-500" />
+                                                <span className="text-gray-300 text-lg font-medium">第三方服務</span>
+                                            </div>
+                                            <div className="flex gap-3">
                                                 <Button
-                                                    isIconOnly
-                                                    className="custom-button-trans-override bg-white/10 text-gray-300"
-                                                    size="sm"
-                                                    onPress={onNameModalOpen}
+                                                    onPress={() => isGoogleLinked() ? handleUnlinkProvider('google.com') : handleLinkProvider('google.com')}
+                                                    className="bg-white flex flex-col items-center justify-center gap-2 p-3 rounded-2xl shadow-xl custom-button-trans-override cursor-pointer transition-all w-full h-fit"
                                                 >
-                                                    <Edit size={14} />
+                                                    <div className="flex items-center gap-3">
+                                                        <FcGoogle size={24} className="flex-shrink-0" />
+                                                        <span className="text-black font-medium text-base">Google</span>
+                                                    </div>
+                                                    <span className={`flex text-sm tracking-widest font-semibold gap-2 items-center ${isGoogleLinked() ? 'text-rose-500' : 'text-emerald-400'
+                                                        }`}>
+                                                        {isGoogleLinked() ? <Unlink size={20} /> : <LinkIcon size={20} />}
+                                                        {isGoogleLinked() ? '解除綁定' : '綁定'}
+                                                    </span>
+                                                </Button>
+                                                <Button
+                                                    onPress={() => isGithubLinked() ? handleUnlinkProvider('github.com') : handleLinkProvider('github.com')}
+                                                    className="bg-zinc-900 flex flex-col items-center justify-center gap-2 p-3 rounded-2xl shadow-xl custom-button-trans-override cursor-pointer transition-all w-full h-fit"
+                                                >
+                                                    <div className="flex items-center gap-3" >
+                                                        <FaGithub size={24} className="flex-shrink-0 text-white" />
+                                                        <span className="text-white font-medium text-base" >Github</span>
+                                                    </div>
+                                                    <span className={`flex text-sm tracking-widest font-semibold gap-2 items-center ${isGithubLinked() ? 'text-rose-500' : 'text-emerald-500'
+                                                        }`}>
+                                                        {isGithubLinked() ? <Unlink size={20} /> : <LinkIcon size={20} />}
+                                                        {isGithubLinked() ? '解除綁定' : '綁定'}
+                                                    </span>
                                                 </Button>
                                             </div>
-                                            <p className="text-white font-medium text-base">{user.displayName || "未設定"}</p>
                                         </div>
-                                    </div>
-
-                                    <div className="custom-input-trans-animate">
-                                        <CustomSelect
-                                            label="頭像來源"
-                                            selectedKeys={new Set([avatarSource])}
-                                            onSelectionChange={(keys) => handleAvatarSourceChange(Array.from(keys)[0] as string)}
-                                            size="sm"
-                                            disabledKeys={disabledAvatarSources}
-                                        >
-                                            <CustomSelectItem key="gravatar">Gravatar</CustomSelectItem>
-                                            <CustomSelectItem key="google">Google</CustomSelectItem>
-                                            <CustomSelectItem key="github">GitHub</CustomSelectItem>
-                                        </CustomSelect>
                                     </div>
                                 </CardBody>
                             </Card>
 
-                            {/* Stats Card - Mobile */}
+                            {/* Stats and Storage Card - Mobile */}
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
-                                <CardHeader className="pb-0 pt-4 px-4 flex-row items-center gap-3">
+                                <CardHeader className="pb-2 pt-4 px-4 flex-row items-center gap-3">
                                     <div className="bg-purple-600/30 p-2 rounded-xl">
-                                        <ChartPie size={20} className="text-purple-400" />
+                                        <ChartPie size={24} className="text-purple-400" />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-base text-white">使用統計</h4>
-                                        <p className="text-gray-300 text-xs">活動概覽</p>
+                                        <h4 className="font-bold text-base text-white">帳號使用統計</h4>
+                                        <p className="text-gray-300 text-xs">您的帳號使用量與統計資料</p>
                                     </div>
                                 </CardHeader>
-                                <CardBody className="px-5 py-5">
-                                    <div className="grid grid-cols-2 gap-4 mb-5">
-                                        <div className="p-3 bg-white/5 rounded-lg text-center">
-                                            <Calendar size={16} className="text-blue-400 mx-auto mb-1" />
-                                            <p className="text-white font-semibold text-base">
-                                                {Math.floor((new Date().getTime() - new Date(user.metadata.creationTime!).getTime()) / (1000 * 60 * 60 * 24))}
-                                            </p>
-                                            <p className="text-gray-400 text-xs mt-0.5">加入天數</p>
-                                        </div>
-
-                                        <div className="p-3 bg-white/5 rounded-lg text-center">
-                                            <Clock size={16} className="text-green-400 mx-auto mb-1" />
-                                            <p className="text-white font-semibold text-base">
-                                                {getRelativeTime(user.metadata.lastSignInTime!)}
-                                            </p>
-                                            <p className="text-gray-400 text-xs mt-0.5">最後登入</p>
-                                        </div>
-
-                                        <div className="p-3 bg-white/5 rounded-lg text-center">
-                                            <HardDrive size={16} className="text-purple-400 mx-auto mb-1" />
-                                            <p className="text-white font-semibold text-base">23</p>
-                                            <p className="text-gray-400 text-xs mt-0.5">已分享</p>
-                                        </div>
-
-                                        <div className="p-3 bg-white/5 rounded-lg text-center">
-                                            <HardDrive size={16} className="text-orange-400 mx-auto mb-1" />
-                                            <p className="text-white font-semibold text-base">47</p>
-                                            <p className="text-gray-400 text-xs mt-0.5">已收到</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Storage - Mobile */}
-                                    <div className="p-4 bg-white/5 rounded-lg">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <ChartPie size={16} className="text-yellow-400" />
-                                            <span className="text-gray-300 text-sm font-medium">容量使用狀況</span>
-                                        </div>
-                                        <div className="flex items-center justify-center gap-6">
-                                            {isLoadingStorage ? (
-                                                <CircularProgress
-                                                    size="lg"
-                                                    strokeWidth={4}
-                                                    aria-label="Loading storage data"
-                                                    classNames={{
-                                                        svg: "w-24 h-24 drop-shadow-lg",
-                                                        indicator: "stroke-cyan-400",
-                                                        track: "stroke-white/20"
-                                                    }}
-                                                />
-                                            ) : (
-                                                <CircularProgress
-                                                    size="lg"
-                                                    value={storageData.percentage}
-                                                    strokeWidth={4}
-                                                    showValueLabel={true}
-                                                    classNames={{
-                                                        svg: "w-24 h-24 drop-shadow-lg",
-                                                        indicator: storageData.percentage >= 90
-                                                            ? "stroke-red-500"
-                                                            : storageData.percentage >= 75
-                                                                ? "stroke-amber-500"
-                                                                : "stroke-cyan-500",
-                                                        track: "stroke-white/20",
-                                                        value: "text-xl font-bold text-white"
-                                                    }}
-                                                />
-                                            )}
-                                            <div className="flex flex-col gap-2">
-                                                <div>
-                                                    <p className="text-xs text-gray-400 mb-0.5">已使用</p>
-                                                    <p className="text-base font-semibold text-white">{storageData.formattedUsed}</p>
+                                <CardBody className="px-4 py-4">
+                                    <div className="space-y-3">
+                                        {/* Statistics - Grid Layout (2x2) */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {/* 加入天數 */}
+                                            <div className="p-3 bg-white/8 rounded-2xl flex flex-col gap-2 shadow-xl custom-button-trans-override">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-2 bg-blue-500/20 rounded-xl">
+                                                        <CalendarCheck size={20} className="text-blue-400" />
+                                                    </div>
+                                                    <p className="text-sm text-gray-300">
+                                                        註冊天數
+                                                    </p>
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-400 mb-0.5">總容量</p>
-                                                    <p className="text-base font-semibold text-gray-300">{storageData.formattedQuota}</p>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    {storageData.percentage >= 90 ? (
-                                                        <>
-                                                            <AlertTriangle size={12} className="text-red-400" />
-                                                            <span className="text-xs text-red-400">容量不足</span>
-                                                        </>
-                                                    ) : storageData.percentage >= 75 ? (
-                                                        <>
-                                                            <AlertTriangle size={12} className="text-amber-400" />
-                                                            <span className="text-xs text-amber-400">即將滿載</span>
-                                                        </>
+                                                <div className="pl-1">
+                                                    {loading ? (
+                                                        <Spinner size="md" color="default" variant="dots" classNames={{ wrapper: "!h-0", base: "h-6" }} className="flex items-center" />
                                                     ) : (
-                                                        <>
-                                                            <Check size={12} className="text-cyan-400" />
-                                                            <span className="text-xs text-cyan-400">使用正常</span>
-                                                        </>
+                                                        <p className="text-white font-semibold text-xl tracking-wide">
+                                                            {Math.floor((new Date().getTime() - new Date(user.metadata.creationTime!).getTime()) / (1000 * 60 * 60 * 24))} 天
+                                                        </p>
                                                     )}
                                                 </div>
+                                            </div>
+
+                                            {/* 最後登入 */}
+                                            <div className="p-3 bg-white/8 rounded-2xl flex flex-col gap-2 shadow-xl custom-button-trans-override">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-2 bg-green-500/20 rounded-xl">
+                                                        <Clock size={20} className="text-green-400" />
+                                                    </div>
+                                                    <p className="text-sm text-gray-300">
+                                                        最後登入
+                                                    </p>
+                                                </div>
+                                                <div className="pl-1">
+                                                    {loading ? (
+                                                        <Spinner size="md" color="default" variant="dots" classNames={{ wrapper: "!h-0", base: "h-6" }} className="flex items-center" />
+                                                    ) : (
+                                                        <p className="text-white font-semibold text-xl tracking-wide">
+                                                            {getRelativeTime(user.metadata.lastSignInTime!)}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* 已分享 */}
+                                            <div className="p-3 bg-white/8 rounded-2xl flex flex-col gap-2 shadow-xl custom-button-trans-override">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-2 bg-purple-500/20 rounded-xl">
+                                                        <FolderOutput size={20} className="text-purple-400" />
+                                                    </div>
+                                                    <p className="text-sm text-gray-300">
+                                                        已分享
+                                                    </p>
+                                                </div>
+                                                <div className="pl-1">
+                                                    {isLoadingStatistics ? (
+                                                        <Spinner size="md" color="default" variant="dots" classNames={{ wrapper: "!h-0", base: "h-6" }} className="flex items-center" />
+                                                    ) : (
+                                                        <p className="text-white font-semibold text-xl tracking-wide">{statistics.filesShared} 個</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* 已收到 */}
+                                            <div className="p-3 bg-white/8 rounded-2xl flex flex-col gap-2 shadow-xl custom-button-trans-override">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-2 bg-orange-500/20 rounded-xl">
+                                                        <FolderInput size={20} className="text-orange-400" />
+                                                    </div>
+                                                    <p className="text-sm text-gray-300">
+                                                        已收到
+                                                    </p>
+                                                </div>
+                                                <div className="pl-1">
+                                                    {isLoadingStatistics ? (
+                                                        <Spinner size="md" color="default" variant="dots" classNames={{ wrapper: "!h-0", base: "h-6" }} className="flex items-center" />
+                                                    ) : (
+                                                        <p className="text-white font-semibold text-xl tracking-wide">{statistics.filesReceived} 個</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+
+                                        </div>
+
+                                        {/* Storage Usage */}
+                                        <div className="p-3 bg-white/8 rounded-2xl shadow-xl custom-button-trans-override">
+                                            <div className="flex flex-col gap-4">
+                                                <div className="flex items-center gap-4">
+                                                    {storageData.percentage >= 85 ? (
+                                                        <div className="p-2 rounded-xl bg-amber-500/20" >
+                                                            <IoAlertOutline size={24} className="shrink-0 rounded-full bg-amber-500 p-1 text-zinc-900 drop-shadow-2xl" />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="p-2 rounded-xl bg-emerald-600/40" >
+                                                            <Check size={24} className="shrink-0 rounded-full bg-emerald-500 p-1 text-zinc-900 drop-shadow-2xl" />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-1">
+                                                        <p className="text-xs text-gray-300">
+                                                            容量使用情況
+                                                        </p>
+                                                        <div className="text-white text-base font-semibold tracking-wider">
+                                                            {storageData.percentage >= 85 ? (
+                                                                <span>需要注意：可用空間剩下 {Math.round(100 - storageData.percentage)}%</span>
+                                                            ) : (
+                                                                <span>一切正常：可用空間還剩 {Math.round(100 - storageData.percentage)}%</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between gap-6 pl-2">
+                                                    <div className="flex flex-col gap-2 flex-1">
+                                                        <div className="space-y-4">
+                                                            <div className="flex items-baseline justify-between border-b border-white/10 pb-2">
+                                                                <span className="text-gray-400 text-sm">已使用</span>
+                                                                <span className="text-white font-semibold text-sm tracking-wider">{storageData.formattedUsed}</span>
+                                                            </div>
+                                                            <div className="flex items-baseline justify-between border-b border-white/10 pb-2">
+                                                                <span className="text-gray-400 text-sm">剩餘可用</span>
+                                                                <span className="text-white font-semibold text-sm tracking-wider">
+                                                                    {(() => {
+                                                                        const usedBytes = storageData.usedBytes;
+                                                                        const quotaBytes = storageData.quotaBytes;
+                                                                        const remainingBytes = quotaBytes - usedBytes;
+                                                                        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+                                                                        let size = remainingBytes;
+                                                                        let unitIndex = 0;
+                                                                        while (size >= 1024 && unitIndex < units.length - 1) {
+                                                                            size /= 1024;
+                                                                            unitIndex++;
+                                                                        }
+                                                                        return `${size.toFixed(2)} ${units[unitIndex]}`;
+                                                                    })()}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-baseline justify-between border-b border-white/10 pb-2">
+                                                                <span className="text-gray-400 text-sm">總容量</span>
+                                                                <span className="text-white font-semibold text-sm tracking-wider">{storageData.formattedQuota}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center justify-center">
+                                                        {isLoadingStorage ? (
+                                                            <CircularProgress
+                                                                size="lg"
+                                                                strokeWidth={2}
+                                                                aria-label="Loading storage data"
+                                                                classNames={{
+                                                                    svg: "w-32 h-32 drop-shadow-2xl",
+                                                                    indicator: "stroke-cyan-400",
+                                                                    track: "stroke-white/20"
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <CircularProgress
+                                                                size="lg"
+                                                                value={storageData.percentage}
+                                                                strokeWidth={2}
+                                                                showValueLabel={true}
+                                                                classNames={{
+                                                                    svg: "w-32 h-32 drop-shadow-2xl",
+                                                                    indicator: storageData.percentage >= 90
+                                                                        ? "stroke-red-500"
+                                                                        : storageData.percentage >= 75
+                                                                            ? "stroke-amber-500"
+                                                                            : "stroke-cyan-500",
+                                                                    track: "stroke-white/20",
+                                                                    value: "text-2xl font-semibold text-white tracking-widest"
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className="text-gray-400 text-xs flex gap-2 items-center text-justify px-2 mb-2">
+                                                    <Info size={18} className="shrink-0" /> 容量計算可能因您所處的地區或網路連線狀況而有所延遲。
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -1347,175 +1898,222 @@ export default function Settings() {
 
                             {/* Account Security - Mobile */}
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
-                                <CardHeader className="pb-0 pt-4 px-4 flex-row items-center gap-3">
+                                <CardHeader className="pb-2 pt-4 px-4 flex-row items-center gap-3">
                                     <div className="bg-orange-600/30 p-2 rounded-xl">
-                                        <Shield size={20} className="text-orange-400" />
+                                        <Shield size={24} className="text-orange-400" />
                                     </div>
-                                    <div className="flex-1">
+                                    <div>
                                         <h4 className="font-bold text-base text-white">帳號安全</h4>
-                                        <p className="text-gray-300 text-xs">登入與安全設定</p>
+                                        <p className="text-gray-300 text-xs">管理登入資訊和安全設定</p>
                                     </div>
                                 </CardHeader>
                                 <CardBody className="px-4 py-4">
                                     <div className="space-y-3">
                                         {/* Email - Mobile */}
-                                        <div className="p-3 bg-white/5 rounded-lg">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Mail size={14} className="text-blue-400" />
-                                                    <span className="text-gray-300 text-xs font-medium">電子郵件</span>
-                                                </div>
-                                                <CustomButton
-                                                    variant="blur"
-                                                    size="sm"
-                                                    onPress={onEmailModalOpen}
-                                                    className="text-gray-300 hover:text-white border-white/20"
-                                                >
-                                                    更改
-                                                </CustomButton>
-                                            </div>
-                                            <p className="text-white font-medium text-sm mb-2 break-all">{user.email}</p>
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                {user.emailVerified ? (
-                                                    <Chip color="success" size="sm" startContent={<Check size={10} />}>
-                                                        已驗證
-                                                    </Chip>
-                                                ) : (
-                                                    <>
-                                                        <Chip color="danger" size="sm" startContent={<X size={10} />}>
-                                                            未驗證
-                                                        </Chip>
+                                        <Popover
+                                            isOpen={emailPopover.isOpen}
+                                            placement="bottom"
+                                            showArrow={true}
+                                            onOpenChange={(open) => setEmailPopover({ ...emailPopover, isOpen: open })}
+                                            offset={8}
+                                            classNames={{
+                                                base: [
+                                                    emailPopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                ],
+                                                content: [
+                                                    emailPopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                    "border-2",
+                                                ].join(" "),
+                                            }}
+                                        >
+                                            <div className="p-5 bg-white/8 rounded-2xl shadow-xl custom-button-trans-override">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="bg-cyan-600/30 p-2 rounded-full">
+                                                            <Mail size={18} className="text-cyan-400" />
+                                                        </div>
+                                                        <span className="text-white text-base tracking-wider">
+                                                            電子郵件
+                                                        </span>
+                                                    </div>
+                                                    <PopoverTrigger>
                                                         <CustomButton
                                                             variant="blur"
                                                             size="sm"
-                                                            onPress={handleSendVerificationEmail}
-                                                            className="text-blue-400 hover:bg-blue-500/20"
+                                                            radius="md"
+                                                            onPress={onEmailModalOpen}
+                                                            className="text-gray-300 hover:text-white border-white/20 text-sm"
+                                                            startContent={
+                                                                <PenLine size={16} className="flex-shrink-0" />
+                                                            }
                                                         >
-                                                            驗證
+                                                            變更
                                                         </CustomButton>
-                                                    </>
-                                                )}
+                                                    </PopoverTrigger>
+                                                </div>
+                                                <p className="text-white font-medium text-base mb-4 pl-2 break-all">{user.email}</p>
+                                                <Popover
+                                                    isOpen={verifyEmailPopover.isOpen && !!verifyEmailPopover.message}
+                                                    placement="bottom"
+                                                    showArrow={true}
+                                                    onOpenChange={(open) => setVerifyEmailPopover({ ...verifyEmailPopover, isOpen: open })}
+                                                    offset={8}
+                                                    classNames={{
+                                                        base: [
+                                                            verifyEmailPopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                        ],
+                                                        content: [
+                                                            verifyEmailPopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                            "border-2",
+                                                        ].join(" "),
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2 flex-wrap pl-2">
+                                                        {user.emailVerified ? (
+                                                            <Chip size="sm" startContent={<Check size={16} className="flex-shrink-0" />} className="text-zinc-800 text-xs p-2 bg-emerald-500 h-8" >
+                                                                已驗證
+                                                            </Chip>
+                                                        ) : (
+                                                            <>
+                                                                <Chip size="sm" startContent={<X size={16} className="flex-shrink-0" />} className="text-white bg-rose-500 text-xs p-2 h-8">
+                                                                    未驗證
+                                                                </Chip>
+                                                                <PopoverTrigger>
+                                                                    <CustomButton
+                                                                        variant="blur"
+                                                                        size="sm"
+                                                                        radius="full"
+                                                                        onPress={handleSendVerificationEmail}
+                                                                        className="text-sky-400 text-xs font-medium"
+                                                                        startContent={
+                                                                            <Send size={16} className="flex-shrink-0" />
+                                                                        }
+                                                                    >
+                                                                        發送驗證信
+                                                                    </CustomButton>
+                                                                </PopoverTrigger>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <PopoverContent>
+                                                        <div className="px-3 py-2">
+                                                            <div className="flex items-center gap-2">
+                                                                {verifyEmailPopover.type === 'success' ? (
+                                                                    <Check size={20} className="text-white" />
+                                                                ) : (
+                                                                    <AlertTriangle size={20} className="text-white" />
+                                                                )}
+                                                                <span className="text-base text-white font-medium">{verifyEmailPopover.message}</span>
+                                                            </div>
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
-                                        </div>
+                                            <PopoverContent>
+                                                <div className="px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        {emailPopover.type === 'success' ? (
+                                                            <Check size={16} className="text-white" />
+                                                        ) : (
+                                                            <AlertTriangle size={16} className="text-white" />
+                                                        )}
+                                                        <span className="text-sm text-white font-medium">{emailPopover.message}</span>
+                                                    </div>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
 
                                         {/* Password - Mobile */}
-                                        <div className="p-3 bg-white/5 rounded-lg">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Key size={14} className="text-green-400" />
-                                                    <span className="text-gray-300 text-xs font-medium">密碼</span>
+                                        <Popover
+                                            isOpen={passwordPopover.isOpen}
+                                            placement="bottom"
+                                            showArrow={true}
+                                            onOpenChange={(open) => setPasswordPopover({ ...passwordPopover, isOpen: open })}
+                                            offset={8}
+                                            classNames={{
+                                                base: [
+                                                    passwordPopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                ],
+                                                content: [
+                                                    passwordPopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                    "border-2",
+                                                ].join(" "),
+                                            }}
+                                        >
+                                            <div className="p-5 bg-white/8 rounded-2xl shadow-xl custom-button-trans-override">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="bg-teal-600/30 p-2 rounded-full" >
+                                                            <Key size={18} className="text-teal-500" />
+                                                        </div>
+                                                        <span className="text-white text-base tracking-wider" >
+                                                            密碼
+                                                        </span>
+                                                    </div>
+                                                    <PopoverTrigger>
+                                                        <CustomButton
+                                                            variant="blur"
+                                                            size="sm"
+                                                            radius="md"
+                                                            onPress={onPasswordModalOpen}
+                                                            className="text-gray-300 hover:text-white border-white/20 text-sm"
+                                                            startContent={
+                                                                <PenLine size={16} className="flex-shrink-0" />
+                                                            }
+                                                        >
+                                                            變更
+                                                        </CustomButton>
+                                                    </PopoverTrigger>
                                                 </div>
-                                                <CustomButton
-                                                    variant="blur"
-                                                    size="sm"
-                                                    onPress={onPasswordModalOpen}
-                                                    className="text-gray-300 hover:text-white border-white/20"
-                                                >
-                                                    更改
-                                                </CustomButton>
+                                                <p className="text-white font-medium text-base mb-4 pl-2 tracking-widest">••••••••••••</p>
+                                                <div className="flex items-center gap-2 pl-2">
+                                                    <Chip size="sm" startContent={<Info size={16} className="flex-shrink-0 mr-1" />} className="text-zinc-800 text-xs p-2 h-8 bg-sky-400" >請定期更新密碼來確保帳號安全</Chip>
+                                                </div>
                                             </div>
-                                            <p className="text-white font-medium text-sm mb-1">••••••••••••</p>
-                                            <p className="text-gray-400 text-xs">最後更新：未知</p>
-                                        </div>
+                                            <PopoverContent>
+                                                <div className="px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        {passwordPopover.type === 'success' ? (
+                                                            <Check size={20} className="text-white" />
+                                                        ) : (
+                                                            <AlertTriangle size={20} className="text-white" />
+                                                        )}
+                                                        <span className="text-base text-white font-medium">{passwordPopover.message}</span>
+                                                    </div>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
 
-                                        {/* Login History - Mobile */}
-                                        <div className="p-3 bg-white/5 rounded-lg">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-1.5">
-                                                    <History size={14} className="text-cyan-400" />
-                                                    <span className="text-gray-300 text-xs font-medium">登入紀錄</span>
+                                        {/* Login History */}
+                                        <div className="p-5 bg-white/8 rounded-2xl shadow-xl custom-button-trans-override">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="bg-indigo-500/30 p-2 rounded-full" >
+                                                        <History size={18} className="text-indigo-400" />
+                                                    </div>
+                                                    <span className="text-white text-base tracking-wider">
+                                                        登入紀錄
+                                                    </span>
                                                 </div>
                                                 <CustomButton
                                                     variant="blur"
                                                     size="sm"
+                                                    radius="md"
+                                                    startContent={<ExternalLink size={16} className="flex-shrink-0" />}
                                                     onPress={() => {
                                                         loadLoginHistory();
                                                         onLoginHistoryDrawerOpen();
                                                     }}
-                                                    className="text-gray-300 hover:text-white border-white/20"
+                                                    className="text-gray-300 hover:text-white border-white/20 text-sm"
                                                 >
                                                     查看
                                                 </CustomButton>
                                             </div>
-                                            <div className="space-y-1">
-                                                <div className="text-xs text-gray-400 flex items-center gap-1">
-                                                    <span className="text-sm">{getDeviceIcon(recentLogin?.device || getDeviceInfo().device)}</span>
-                                                    {recentLogin?.device || getDeviceInfo().device}
-                                                </div>
-                                                <div className="text-xs text-gray-400">
-                                                    📍 {recentLogin?.location || "載入中..."}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Providers - Mobile */}
-                                        <div className="p-3 bg-white/5 rounded-lg">
-                                            <div className="flex items-center gap-1.5 mb-3">
-                                                <LinkIcon size={14} className="text-purple-400" />
-                                                <span className="text-gray-300 text-xs font-medium">第三方服務</span>
-                                            </div>
-                                            <div className="space-y-2.5">
-                                                <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-lg">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center flex-shrink-0">
-                                                            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                                                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                                                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                                                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                                                            </svg>
-                                                        </div>
-                                                        <span className="text-white text-xs font-medium">Google</span>
-                                                    </div>
-                                                    {isGoogleLinked() ? (
-                                                        <CustomButton
-                                                            variant="blur"
-                                                            size="sm"
-                                                            onPress={() => handleUnlinkProvider('google.com')}
-                                                            className="text-red-400 hover:bg-red-500/20 border-red-500/30"
-                                                        >
-                                                            解除
-                                                        </CustomButton>
-                                                    ) : (
-                                                        <CustomButton
-                                                            variant="blur"
-                                                            size="sm"
-                                                            onPress={() => handleLinkProvider('google.com')}
-                                                            className="text-green-400 hover:bg-green-500/20 border-green-500/30"
-                                                        >
-                                                            綁定
-                                                        </CustomButton>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-lg">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-6 h-6 bg-gray-800 rounded flex items-center justify-center flex-shrink-0">
-                                                            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                                                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-                                                            </svg>
-                                                        </div>
-                                                        <span className="text-white text-xs font-medium">GitHub</span>
-                                                    </div>
-                                                    {isGithubLinked() ? (
-                                                        <CustomButton
-                                                            variant="blur"
-                                                            size="sm"
-                                                            onPress={() => handleUnlinkProvider('github.com')}
-                                                            className="text-red-400 hover:bg-red-500/20 border-red-500/30"
-                                                        >
-                                                            解除
-                                                        </CustomButton>
-                                                    ) : (
-                                                        <CustomButton
-                                                            variant="blur"
-                                                            size="sm"
-                                                            onPress={() => handleLinkProvider('github.com')}
-                                                            className="text-green-400 hover:bg-green-500/20 border-green-500/30"
-                                                        >
-                                                            綁定
-                                                        </CustomButton>
-                                                    )}
+                                            <div className="space-y-1 pl-2">
+                                                <div className="text-base text-white font-medium flex flex-col gap-1 tracking-wider" >
+                                                    <span>🕓 {recentLogin ? formatDate(recentLogin.timestamp) : "載入中..."}</span>
+                                                    <span>{getDeviceIcon(recentLogin?.device || getDeviceInfo().device)} {recentLogin?.device || getDeviceInfo().device}</span>
+                                                    <span>📍 {recentLogin?.location || "載入中..."}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1524,34 +2122,66 @@ export default function Settings() {
                             </Card>
 
                             {/* Danger Zone - Mobile */}
-                            <Card className="bg-red-950/20 backdrop-blur-sm border-red-500/30" shadow="lg">
-                                <CardHeader className="pb-0 pt-4 px-4 flex-row items-center gap-3">
-                                    <div className="bg-red-600/30 p-2 rounded-xl">
-                                        <AlertTriangle size={20} className="text-red-400" />
+                            <Card className="bg-red-500/20 backdrop-blur-sm" shadow="lg">
+                                <CardHeader className="pb-2 pt-4 px-4 flex-row items-center gap-3">
+                                    <div className="bg-red-600/20 p-2 rounded-xl">
+                                        <AlertTriangle size={24} className="text-rose-400" />
                                     </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-bold text-base text-red-300">危險區域</h4>
-                                        <p className="text-red-400/70 text-xs">操作無法復原</p>
+                                    <div>
+                                        <h4 className="font-bold text-base text-red-200">危險區域</h4>
+                                        <p className="text-rose-300 text-xs">這些操作無法復原，請謹慎執行</p>
                                     </div>
                                 </CardHeader>
                                 <CardBody className="px-4 py-4">
                                     <div className="space-y-3">
-                                        <CustomButton
-                                            variant="blur"
-                                            startContent={<Trash2 size={16} />}
-                                            onPress={onDeleteModalOpen}
-                                            className="w-full bg-red-600/20 border-red-500/50 text-red-300 hover:bg-red-600/30"
-                                        >
-                                            刪除所有檔案
-                                        </CustomButton>
-                                        <CustomButton
-                                            variant="blur"
-                                            startContent={<UserX size={16} />}
-                                            onPress={onDeleteAccountModalOpen}
-                                            className="w-full bg-red-700/30 border-red-500/70 text-red-200 hover:bg-red-700/40"
-                                        >
-                                            刪除帳號
-                                        </CustomButton>
+                                        <div className="relative p-5 bg-white/8 rounded-2xl shadow-2xl custom-button-trans-override overflow-hidden flex flex-col">
+                                            <PackageX size={100} className="absolute -top-8 -left-6 text-red-400 opacity-30" style={{ mixBlendMode: 'normal' }} />
+                                            <div className="flex items-center justify-between mb-3 relative z-10">
+                                                <div className="flex items-center gap-3 pl-2">
+                                                    <span className="text-red-200 text-base tracking-widest font-semibold">
+                                                        刪除所有檔案
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <p className="text-white font-medium flex-wrap text-justify text-sm mb-4 pl-2 relative z-10 flex-1">永久刪除所有已上傳的檔案，此操作無法復原。</p>
+                                            <div className="flex justify-end relative z-10">
+                                                <CustomButton
+                                                    variant="blur"
+                                                    size="md"
+                                                    onPress={onDeleteModalOpen}
+                                                    className="text-red-400 border-red-500/50 border-2 text-base"
+                                                    startContent={
+                                                        <Trash2 size={18} className="flex-shrink-0" />
+                                                    }
+                                                >
+                                                    刪除
+                                                </CustomButton>
+                                            </div>
+                                        </div>
+                                        <div className="relative p-5 bg-white/8 rounded-2xl shadow-2xl custom-button-trans-override overflow-hidden flex flex-col">
+                                            <UserRoundXIcon size={100} className="absolute -top-8 -left-6 text-red-400 opacity-30" style={{ mixBlendMode: 'normal' }} />
+                                            <div className="flex items-center justify-between mb-3 relative z-10">
+                                                <div className="flex items-center gap-3 pl-2">
+                                                    <span className="text-red-200 text-base tracking-widest font-semibold">
+                                                        刪除帳號
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <p className="text-white font-medium flex-wrap text-justify text-sm mb-4 pl-2 relative z-10 flex-1">永久刪除這個帳號，跟 Share Lock 說再見。</p>
+                                            <div className="flex justify-end relative z-10">
+                                                <CustomButton
+                                                    variant="blur"
+                                                    size="md"
+                                                    onPress={onDeleteAccountModalOpen}
+                                                    className="text-red-400 border-red-500/50 border-2 text-base"
+                                                    startContent={
+                                                        <PiHandWaving size={18} className="flex-shrink-0" />
+                                                    }
+                                                >
+                                                    バイバイ
+                                                </CustomButton>
+                                            </div>
+                                        </div>
                                     </div>
                                 </CardBody>
                             </Card>
@@ -1580,7 +2210,7 @@ export default function Settings() {
                                     <CustomButton
                                         variant="blur"
                                         onPress={onClose}
-                                        className="text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                        className="text-white"
                                     >
                                         取消
                                     </CustomButton>
@@ -1589,7 +2219,7 @@ export default function Settings() {
                                         onPress={handleUpdateDisplayName}
                                         isLoading={isUpdating}
                                         isDisabled={!displayName.trim() || displayName === user?.displayName}
-                                        className="text-blue-400 hover:bg-blue-500/20 border-blue-500/30"
+                                        className="text-blue-400 border-blue-500/50 border-2 text-base"
                                     >
                                         更新
                                     </CustomButton>
@@ -1643,7 +2273,7 @@ export default function Settings() {
                                     <CustomButton
                                         variant="blur"
                                         onPress={onClose}
-                                        className="text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                        className="text-white"
                                     >
                                         取消
                                     </CustomButton>
@@ -1652,7 +2282,7 @@ export default function Settings() {
                                         onPress={handleUpdateEmail}
                                         isLoading={isUpdating}
                                         isDisabled={!newEmail.trim() || !currentPassword || newEmail === user?.email}
-                                        className="text-blue-400 hover:bg-blue-500/20 border-blue-500/30"
+                                        className="text-blue-400 border-blue-500/50 border-2 text-base"
                                     >
                                         更新
                                     </CustomButton>
@@ -1721,6 +2351,8 @@ export default function Settings() {
                                             label="再次輸入新密碼"
                                             type={showConfirmPassword ? "text" : "password"}
                                             onValueChange={setConfirmPassword}
+                                            isInvalid={!!(newPassword !== confirmPassword && confirmPassword)}
+                                            errorMessage={newPassword !== confirmPassword && confirmPassword ? "*密碼確認不一致" : ""}
                                         />
                                         <Button
                                             isIconOnly
@@ -1737,15 +2369,12 @@ export default function Settings() {
                                             )}
                                         </Button>
                                     </div>
-                                    {newPassword !== confirmPassword && confirmPassword && (
-                                        <p className="text-red-400 text-sm">密碼確認不一致</p>
-                                    )}
                                 </CustomModalBody>
                                 <CustomModalFooter>
                                     <CustomButton
                                         variant="blur"
                                         onPress={onClose}
-                                        className="text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                        className="text-white"
                                     >
                                         取消
                                     </CustomButton>
@@ -1754,7 +2383,7 @@ export default function Settings() {
                                         onPress={handleUpdatePassword}
                                         isLoading={isUpdating}
                                         isDisabled={!currentPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
-                                        className="text-blue-400 hover:bg-blue-500/20 border-blue-500/30"
+                                        className="text-blue-400  border-blue-500/50 border-2 text-base"
                                     >
                                         更新
                                     </CustomButton>
@@ -1770,38 +2399,36 @@ export default function Settings() {
                         {(onClose) => (
                             <>
                                 <CustomModalHeader>
-                                    <div className=" text-red-400 pt-4">刪除所有檔案</div>
-                                    <p className="text-sm text-gray-400">此操作無法復原</p>
+                                    <AlertTriangle className="text-red-400 flex-shrink-0 pt-4" size={56} />
+                                    <div className=" text-red-400 pt-2">刪除所有檔案</div>
                                 </CustomModalHeader>
                                 <CustomModalBody>
-                                    <div className="bg-red-950/20 border border-red-500/30 rounded-lg p-4">
-                                        <div className="flex items-start gap-3">
-                                            <AlertTriangle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
-                                            <div>
-                                                <h4 className="font-medium text-red-300">確認刪除</h4>
-                                                <p className="text-red-200 text-sm mt-1">
-                                                    這將會刪除您所有上傳的檔案，包括：
-                                                </p>
-                                                <ul className="text-red-200 text-sm mt-2 space-y-1">
-                                                    <li>• 所有已分享的檔案</li>
-                                                    <li>• 所有檔案分享連結</li>
-                                                    <li>• 相關的分享記錄</li>
-                                                </ul>
+                                    <div className="bg-red-600/20 border-2 border-red-500/50 rounded-lg p-4 shadow-2xl">
+                                        <div className="flex flex-col items-start gap-3 pl-2">
+                                            <div className="flex flex-col text-rose-200">
+                                                <p>若繼續，此操作將會刪除以下資料：</p>
+                                                <div>
+                                                    <span className="flex flex-row items-center" ><Dot className="flex-shrink-0 -ml-1" />您帳號中的所有檔案。</span>
+                                                    <span className="flex flex-row items-center" ><Dot className="flex-shrink-0 -ml-1" />曾創建過的所有分享連結。</span>
+                                                    <span className="flex flex-row items-center" ><Dot className="flex-shrink-0 -ml-1" />帳號中關於檔案分享的統計資訊。</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <CustomInput
-                                        label="輸入 'DELETE' 以確認"
-                                        placeholder="DELETE"
-                                        value={deleteConfirmText}
-                                        onValueChange={setDeleteConfirmText}
-                                    />
+                                    <div className="custom-input-trans-animate">
+                                        <CustomInput
+                                            label="輸入 'DELETE' 以確認"
+                                            size="md"
+                                            value={deleteConfirmText}
+                                            onValueChange={setDeleteConfirmText}
+                                        />
+                                    </div>
                                 </CustomModalBody>
                                 <CustomModalFooter>
                                     <CustomButton
                                         variant="blur"
                                         onPress={onClose}
-                                        className="text-gray-300 hover:bg-white/10 border-white/30"
+                                        className="text-white"
                                     >
                                         取消
                                     </CustomButton>
@@ -1810,7 +2437,10 @@ export default function Settings() {
                                         onPress={handleDeleteFiles}
                                         isLoading={isUpdating}
                                         isDisabled={deleteConfirmText !== 'DELETE'}
-                                        className="text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                        className="text-red-400 border-red-500/50 border-2"
+                                        startContent={
+                                            <Trash2 size={18} className="flex-shrink-0" />
+                                        }
                                     >
                                         確認刪除
                                     </CustomButton>
@@ -1826,40 +2456,37 @@ export default function Settings() {
                         {(onClose) => (
                             <>
                                 <CustomModalHeader>
-                                    <h3 className=" text-red-400 pt-4">刪除帳號</h3>
-                                    <p className="text-sm text-gray-400">此操作無法復原，請謹慎考慮</p>
+                                    <AlertTriangle className="text-red-400 flex-shrink-0 pt-4" size={56} />
+                                    <div className=" text-red-400 pt-2">刪除此帳號</div>
                                 </CustomModalHeader>
                                 <CustomModalBody>
-                                    <div className="bg-red-950/20 border border-red-500/30 rounded-lg p-4">
-                                        <div className="flex items-start gap-3">
-                                            <AlertTriangle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
-                                            <div>
-                                                <h4 className="font-medium text-red-300">確認刪除帳號</h4>
-                                                <p className="text-red-200 text-sm mt-1">
-                                                    刪除帳號將會：
-                                                </p>
-                                                <ul className="text-red-200 text-sm mt-2 space-y-1">
-                                                    <li>• 永久刪除您的所有資料</li>
-                                                    <li>• 刪除所有檔案和分享連結</li>
-                                                    <li>• 無法恢復您的帳號</li>
-                                                    <li>• 立即登出所有裝置</li>
-                                                </ul>
+                                    <div className="bg-red-600/20 border-2 border-red-500/50 rounded-lg p-4 shadow-2xl">
+                                        <div className="flex flex-col items-start gap-3 pl-2">
+                                            <div className="flex flex-col text-rose-200">
+                                                <p>若繼續，此操作將會影響：</p>
+                                                <div>
+                                                    <span className="flex flex-row items-center" ><Dot className="flex-shrink-0 -ml-1" />永久刪除您帳號中的所有資料</span>
+                                                    <span className="flex flex-row items-center" ><Dot className="flex-shrink-0 -ml-1" />立即登出所有裝置。</span>
+                                                    <span className="flex flex-row items-center gap-3 mt-2 ml-0.5 mr-3" ><CircleAlert className="flex-shrink-0 self-center" size={26} /><div className="text-justify text-sm">請注意，此操作無法復原，我們也無法恢復您的任何資料。</div></span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <CustomInput
-                                        label="當前密碼"
-                                        placeholder="輸入密碼以確認身份"
-                                        type="password"
-                                        value={currentPassword}
-                                        onValueChange={setCurrentPassword}
-                                    />
+                                    <div className="custom-input-trans-animate">
+                                        <CustomInput
+                                            label="輸入密碼來確認"
+                                            type="password"
+                                            size="md"
+                                            value={currentPassword}
+                                            onValueChange={setCurrentPassword}
+                                        />
+                                    </div>
                                 </CustomModalBody>
                                 <CustomModalFooter>
                                     <CustomButton
                                         variant="blur"
                                         onPress={onClose}
-                                        className="text-gray-300 hover:bg-white/10 border-white/30"
+                                        className="text-white"
                                     >
                                         取消
                                     </CustomButton>
@@ -1868,9 +2495,12 @@ export default function Settings() {
                                         onPress={handleDeleteAccount}
                                         isLoading={isUpdating}
                                         isDisabled={!currentPassword}
-                                        className="text-red-400 hover:bg-red-500/20 border-red-500/30"
+                                        className="text-red-400 border-red-500/50 border-2"
+                                        startContent={
+                                            <PiHandWaving size={18} className="flex-shrink-0" />
+                                        }
                                     >
-                                        永久刪除帳號
+                                        刪除帳號
                                     </CustomButton>
                                 </CustomModalFooter>
                             </>
@@ -1879,47 +2509,40 @@ export default function Settings() {
                 </CustomModal>
 
                 {/* Login History Drawer */}
-                <Drawer
+                <CustomDrawer
                     isOpen={isLoginHistoryDrawerOpen}
                     onOpenChange={onLoginHistoryDrawerOpenChange}
                     placement="right"
-                    size="lg"
-                    classNames={{
-                        base: "bg-gradient-to-br from-slate-800 to-neutral-900",
-                        header: "border-b border-white/20",
-                        body: "py-4",
-                        footer: "border-t border-white/20"
-                    }}
+                    backdrop="blur"
+                    size="xl"
+                    variant="blur"
                 >
-                    <DrawerContent>
+                    <CustomDrawerContent>
                         {(onClose) => (
                             <>
-                                <DrawerHeader className="flex flex-col gap-1 text-white">
+                                <CustomDrawerHeader>
                                     <div className="flex items-center justify-between">
-                                        <div>
-                                            <h2 className="text-xl font-bold flex items-center gap-2">
-                                                <History size={24} className="text-cyan-400" />
-                                                登入紀錄
-                                            </h2>
-                                            <p className="text-sm text-gray-300">查看您的帳號登入活動</p>
+                                        <div className="text-xl font-bold flex items-center gap-3 mt-2">
+                                            <div className="p-2 rounded-xl bg-indigo-500/30 flex" >
+                                                <History size={30} className="text-indigo-400" />
+                                            </div>
+                                            <div>
+                                                <div className="text-white font-bold text-xl" >登入紀錄</div>
+                                                <p className="text-gray-300 font-normal text-sm" >檢查你的帳號登入情形</p>
+                                            </div>
                                         </div>
                                     </div>
-                                </DrawerHeader>
-                                <DrawerBody className="px-6 py-4 overflow-y-auto">
-                                    <div className="space-y-4">
-                                        {/* Security Tips - Always first item */}
-                                        <Card className="bg-blue-950/20 backdrop-blur-sm border-blue-500/30">
+                                </CustomDrawerHeader>
+                                <CustomDrawerBody>
+                                    <div className="space-y-5">
+                                        <Card className="bg-blue-400/20 backdrop-blur-sm  rounded-2xl custom-button-trans-override shadow-xl">
                                             <CardBody className="p-4">
-                                                <div className="flex items-start gap-3">
-                                                    <Shield size={20} className="text-blue-400 flex-shrink-0 mt-1" />
-                                                    <div>
-                                                        <h4 className="text-blue-300 font-medium text-sm mb-2">安全提醒</h4>
-                                                        <ul className="text-blue-200 text-xs space-y-1">
-                                                            <li>• 如果發現異常登入記錄，請立即更改密碼</li>
-                                                            <li>• 建議定期檢查登入記錄以確保帳號安全</li>
-                                                            <li>• 請勿在公共網路或設備上登入重要帳號</li>
-                                                            <li>• 建議啟用雙重驗證以提高安全性</li>
-                                                        </ul>
+                                                <div className="flex flex-col items-start gap-2">
+                                                    <span className="flex flex-row gap-2 bg-linear-65 from-blue-500 to-cyan-300 bg-clip-text text-transparent mt-1 items-center font-semibold text-lg tracking-wider ml-2"><Shield size={24} className=" text-sky-400 flex-shrink-0" />我們重視你的帳號安全</span>
+                                                    <div className="ml-2 text-blue-300 text-sm flex flex-col">
+                                                        <span className="flex flex-row items-center" ><Dot className="flex-shrink-0" />發現異常的登入時，請立即修改密碼。</span>
+                                                        <span className="flex flex-row items-center" ><Dot className="flex-shrink-0" />請驗證您的電子信箱來確保帳號安全。</span>
+                                                        <span className="flex flex-row items-center" ><Dot className="flex-shrink-0" />使用公共設備登入後，請記得登出。</span>
                                                     </div>
                                                 </div>
                                             </CardBody>
@@ -1927,83 +2550,70 @@ export default function Settings() {
 
                                         {isLoadingHistory ? (
                                             <div className="flex items-center justify-center py-8">
-                                                <Spinner color="primary" size="lg" />
-                                                <span className="ml-3 text-white">載入登入紀錄中...</span>
+                                                <Spinner
+                                                    color="default"
+                                                    size="lg"
+                                                    label="載入中..."
+                                                    classNames={{
+                                                        label: "text-white mt-2"
+                                                    }}
+                                                />
                                             </div>
                                         ) : (
-                                            <div className="space-y-4">
+                                            <div className="space-y-5">
                                                 {loginHistory.length === 0 ? (
                                                     <div className="text-center py-8">
-                                                        <p className="text-gray-400">暫無登入紀錄</p>
+                                                        <p className="text-gray-400 text-base">暫無登入紀錄</p>
                                                     </div>
                                                 ) : (
                                                     loginHistory.map((record, index) => (
                                                         <Card
                                                             key={record.id}
-                                                            className={`bg-white/5 backdrop-blur-sm border-white/10 ${!record.success ? 'border-red-500/30 bg-red-950/20' : ''}`}
+                                                            className="bg-white/8 backdrop-blur-sm border-white/10 rounded-2xl custom-button-trans-override shadow-xl"
                                                         >
-                                                            <CardBody className="p-4">
-                                                                <div className="flex items-start justify-between">
-                                                                    <div className="flex items-start gap-3">
-                                                                        <div className="text-2xl">{getDeviceIcon(record.device)}</div>
-                                                                        <div className="flex-1">
-                                                                            <div className="flex items-center gap-2 mb-1">
-                                                                                <h3 className="text-white font-medium text-sm">{record.device}</h3>
-                                                                                {record.success ? (
-                                                                                    <Chip size="sm" color="success" variant="flat" startContent={<Check size={10} />}>
-                                                                                        成功
-                                                                                    </Chip>
-                                                                                ) : (
-                                                                                    <Chip size="sm" color="danger" variant="flat" startContent={<X size={10} />}>
-                                                                                        失敗
-                                                                                    </Chip>
-                                                                                )}
-                                                                                {index === 0 && (
-                                                                                    <Chip size="sm" color="primary" variant="flat">
-                                                                                        最近
-                                                                                    </Chip>
-                                                                                )}
-                                                                                {record.provider && (
-                                                                                    <Chip size="sm" color="secondary" variant="flat">
-                                                                                        {record.provider === 'google.com' ? 'Google' :
-                                                                                            record.provider === 'github.com' ? 'GitHub' :
-                                                                                                record.provider === 'password' ? 'Email' : record.provider}
-                                                                                    </Chip>
-                                                                                )}
-                                                                            </div>
-                                                                            <div className="space-y-1">
-                                                                                <p className="text-gray-300 text-xs flex items-center gap-1">
-                                                                                    <Clock size={10} />
-                                                                                    {formatDate(record.timestamp)}
-                                                                                </p>
-                                                                                <p className="text-gray-400 text-xs">
-                                                                                    📍 {record.location}
-                                                                                </p>
-                                                                                <p className="text-gray-400 text-xs">
-                                                                                    🌐 {record.ip}
-                                                                                </p>
-                                                                                {record.errorMessage && (
-                                                                                    <p className="text-red-400 text-xs">
-                                                                                        ❌ {record.errorMessage}
-                                                                                    </p>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
+                                                            <CardBody className="p-4 space-y-3">
+                                                                <div className="flex items-center gap-2 w-full">
+                                                                    <div className="text-lg h-8 w-8 flex items-center justify-center flex-shrink-0">
+                                                                        {record.success ? getDeviceIcon(record.device) : "⚠️"}
                                                                     </div>
-                                                                    <div className="text-right">
-                                                                        <p className="text-gray-400 text-xs">{getRelativeTime(record.timestamp)}</p>
-                                                                        {!record.success && (
-                                                                            <Tooltip content={record.errorMessage || "登入失敗的原因通常是密碼錯誤或帳號被暫時鎖定"}>
-                                                                                <Button
-                                                                                    isIconOnly
-                                                                                    size="sm"
-                                                                                    variant="light"
-                                                                                    className="text-red-400 mt-1"
-                                                                                >
-                                                                                    <AlertTriangle size={14} />
-                                                                                </Button>
-                                                                            </Tooltip>
+                                                                    <div className={`text-lg font-semibold tracking-tight flex-1 truncate ${record.success ? 'text-white' : 'text-red-400'}`}>
+                                                                        {record.device}
+                                                                    </div>
+                                                                    <p className="text-gray-400 text-xs ml-auto self-center">{getRelativeTime(record.timestamp)}</p>
+                                                                </div>
+                                                                <div className="flex flex-col pl-8" >
+                                                                    <div className="flex flex-row gap-2 items-center" >
+                                                                        {index === 0 && (
+                                                                            <Chip color="primary" size="md" radius="lg" startContent={<BadgeAlert size={18} className="ml-1" />} className="px-1 shadow-lg" >最新</Chip>
                                                                         )}
+                                                                        {record.success ? (
+                                                                            <Chip size="md" radius="lg" startContent={<Check size={18} className="ml-1" />} className="px-1 shadow-lg text-zinc-800 bg-emerald-500" >成功</Chip>
+                                                                        ) : (
+                                                                            <Chip size="md" radius="lg" startContent={<X size={18} className="ml-1" />} className="px-1 shadow-lg text-white bg-rose-500" >{getFirebaseErrorMessage(record.errorMessage || "")}</Chip>
+                                                                        )}
+                                                                        {getChip(record.provider || "unknown")}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="pl-8 flex flex-col space-y-1.5" >
+                                                                    <Chip size="md" radius="lg" startContent={<Clock4 size={18} className="ml-1 mr-1 text-amber-500" />} className="px-1 shadow-lg bg-neutral-900/50 text-gray-200 tracking-wider" >{formatDate(record.timestamp)}</Chip>
+                                                                    <Chip
+                                                                        size="md"
+                                                                        radius="lg"
+                                                                        startContent={
+                                                                            <span className="relative inline-flex items-center">
+                                                                                <HiMiniMapPin size={18} className="ml-1 mr-1 text-red-500" />
+                                                                                <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                                                    <span className="w-[5px] h-[5px] bg-white rounded-full -translate-y-[1px]" />
+                                                                                </span>
+                                                                            </span>
+                                                                        }
+                                                                        className="px-1 shadow-lg bg-neutral-900/50 text-gray-200 tracking-wider"
+                                                                    >
+                                                                        {record.location}
+                                                                    </Chip>
+                                                                    <div className="flex flex-row">
+                                                                        <Chip size="md" radius="lg" startContent={<Unplug size={18} className="ml-1 mr-1 text-sky-500" />} className="px-1 shadow-lg bg-neutral-900/50 text-gray-200 tracking-wider" >{record.ip}</Chip>
+                                                                        <div className="w-4 shrink-0"></div>
                                                                     </div>
                                                                 </div>
                                                             </CardBody>
@@ -2013,20 +2623,20 @@ export default function Settings() {
                                             </div>
                                         )}
                                     </div>
-                                </DrawerBody>
-                                <DrawerFooter>
+                                </CustomDrawerBody>
+                                <CustomDrawerFooter>
                                     <Button
                                         color="primary"
                                         onPress={onClose}
-                                        className="custom-button-trans-override"
+                                        className="custom-button-trans-override flex items-center text-base"
                                     >
-                                        關閉
+                                        <ChevronLeft size={20} className="flex-shrink-0" /> 關閉
                                     </Button>
-                                </DrawerFooter>
+                                </CustomDrawerFooter>
                             </>
                         )}
-                    </DrawerContent>
-                </Drawer>
+                    </CustomDrawerContent>
+                </CustomDrawer>
             </DashboardContentTransition>
         </div>
     );
