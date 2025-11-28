@@ -60,7 +60,7 @@ export default function Dashboard() {
         fetchStorageUsage();
     }, [user]);
     const welcomeString = ["🌅 早安，歡迎回來！", "☀️ 午安，歡迎回來！", "🌇 晚安，近來好嗎？", "🌙 夜深了，好好休息吧！"]
-    
+
     const getWelcomeMessage = () => {
         const currentHour = new Date().getHours();
         if (currentHour >= 5 && currentHour < 12) {
@@ -579,10 +579,10 @@ export default function Dashboard() {
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
                                 <CardHeader className="pb-2 pt-4 px-4 flex-row items-center gap-3">
                                     <div className="bg-blue-600/30 p-2 rounded-xl">
-                                        <Share2 size={20} className="text-blue-400" />
+                                        <Share2 size={24} className="text-blue-400" />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-lg text-white">檔案分享</h4>
+                                        <h4 className="font-bold text-base text-white">檔案分享</h4>
                                         <p className="text-gray-300 text-xs">看看有沒有人要分享檔案給你？</p>
                                     </div>
                                     <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
@@ -634,10 +634,10 @@ export default function Dashboard() {
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
                                 <CardHeader className="pb-0 pt-4 px-4 flex-row items-center gap-3">
                                     <div className="bg-purple-500/20 p-2 rounded-xl">
-                                        <ChartPie size={20} className="text-purple-400" />
+                                        <ChartPie size={24} className="text-purple-400" />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-lg text-white">使用狀況</h4>
+                                        <h4 className="font-bold text-base text-white">使用狀況</h4>
                                         <p className="text-gray-300 text-xs">查看你的帳號使用狀況</p>
                                     </div>
                                     <Button
@@ -692,11 +692,11 @@ export default function Dashboard() {
                                 <CardHeader className="pb-0 pt-4 px-4 flex-row items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="bg-yellow-500/20 p-2 rounded-xl">
-                                            <BellRing size={20} className="text-yellow-400" />
+                                            <BellRing size={24} className="text-yellow-400" />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-lg text-white">通知中心</h4>
-                                            <p className="text-gray-300 text-xs">重要訊息通知</p>
+                                            <h4 className="font-bold text-base text-white">通知中心</h4>
+                                            <p className="text-gray-300 text-xs">負責掌管你的重要訊息</p>
                                         </div>
                                     </div>
                                     <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
@@ -759,10 +759,10 @@ export default function Dashboard() {
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
                                 <CardHeader className="pb-0 pt-4 px-4 flex-row items-center gap-3">
                                     <div className="bg-blue-500/20 p-2 rounded-xl">
-                                        <FileText size={20} className="text-blue-400" />
+                                        <FileText size={24} className="text-blue-400" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-lg text-white">最近使用的檔案</h4>
+                                        <h4 className="font-bold text-base text-white">最近使用的檔案</h4>
                                         <p className="text-gray-300 text-xs">快速存取您最近開啟或分享的檔案</p>
                                     </div>
                                 </CardHeader>
