@@ -103,7 +103,6 @@ export default function MyFiles() {
             }
 
             const data = await response.json();
-            console.log("Fetched files:", data);
             setFiles(data.files || []);
         } catch (error) {
             console.error("Error fetching files:", error);
