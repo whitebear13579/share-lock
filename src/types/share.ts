@@ -152,6 +152,52 @@ export interface ShareSettings {
 
 */
 
+// Login History API
+export interface RecordLoginRequest {
+    userId?: string;
+    attemptedEmail?: string;
+    device: string;
+    userAgent: string;
+    ip: string;
+    location: string;
+    success: boolean;
+    provider?: string;
+    errorMessage?: string;
+}
+
+export interface RecordLoginResponse {
+    success: boolean;
+    recordId?: string;
+    error?: string;
+    details?: string;
+}
+
+export interface LoginHistoryRequest {
+    limit?: number;
+}
+
+export interface LoginHistoryResponse {
+    success: boolean;
+    records?: Array<{
+        id: string;
+        userId: string;
+        attemptedEmail?: string;
+        timestamp: {
+            _seconds: number;
+            _nanoseconds: number;
+        };
+        device: string;
+        userAgent: string;
+        ip: string;
+        location: string;
+        success: boolean;
+        provider?: string;
+        errorMessage?: string;
+    }>;
+    error?: string;
+    details?: string;
+}
+
 // WebAuthn Registration (start registration)
 export interface StartRegistrationRequest {
     shareId: string;
