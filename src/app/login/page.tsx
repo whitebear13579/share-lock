@@ -95,7 +95,7 @@ export default function Login() {
             const firebaseError = error as { code: string };
 
             try {
-                await recordLogin(null, false, 'email', firebaseError.code);
+                await recordLogin(null, false, 'email', firebaseError.code, email);
             } catch (logError) {
                 console.error("Failed to record failed login:", logError);
             }
