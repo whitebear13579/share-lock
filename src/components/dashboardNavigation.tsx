@@ -22,15 +22,6 @@ export const NAVIGATION_ROUTES = [
 export function getNavigationDirection(fromPath: string, toPath: string): "left" | "right" {
     const fromIndex = NAVIGATION_ROUTES.findIndex(route => route.path === fromPath);
     const toIndex = NAVIGATION_ROUTES.findIndex(route => route.path === toPath);
-
-    console.log("🧭 Navigation direction calculation:", {
-        fromPath,
-        toPath,
-        fromIndex,
-        toIndex,
-        result: toIndex > fromIndex ? "left" : "right"
-    });
-
     return toIndex > fromIndex ? "left" : "right";
 }
 
