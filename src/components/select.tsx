@@ -13,7 +13,7 @@ const CustomSelect = React.forwardRef<HTMLSelectElement, CustomSelectProps>(
 
         const variantStyles = {
             blur: {
-                trigger: "rounded-2xl bg-white/10 border border-white/30 hover:bg-white/15 data-[hover=true]:bg-white/15 backdrop-blur-sm shadow-lg transition-all duration-200",
+                trigger: "rounded-2xl !bg-white/10 border border-white/30 hover:bg-white/15 data-[hover=true]:bg-white/15 backdrop-blur-sm shadow-lg transition-all duration-200",
                 label: "text-gray-200 group-data-[filled=true]:text-gray-200",
                 value: "text-white group-data-[has-value=true]:text-white ",
                 selectorIcon: "text-gray-200",
