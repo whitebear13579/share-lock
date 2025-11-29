@@ -2199,18 +2199,20 @@ export default function Settings() {
                                     <div className="pt-4">變更使用者名稱</div>
                                 </CustomModalHeader>
                                 <CustomModalBody>
-                                    <CustomInput
-                                        size="md"
-                                        label="輸入使用者名稱"
-                                        value={displayName}
-                                        onValueChange={setDisplayName}
-                                    />
+                                    <div className="custom-input-trans-animate" >
+                                        <CustomInput
+                                            size="lg"
+                                            label="輸入使用者名稱"
+                                            value={displayName}
+                                            onValueChange={setDisplayName}
+                                        />
+                                    </div>
                                 </CustomModalBody>
                                 <CustomModalFooter>
                                     <CustomButton
                                         variant="blur"
                                         onPress={onClose}
-                                        className="text-white"
+                                        className="text-gray-300"
                                     >
                                         取消
                                     </CustomButton>
@@ -2273,7 +2275,7 @@ export default function Settings() {
                                     <CustomButton
                                         variant="blur"
                                         onPress={onClose}
-                                        className="text-white"
+                                        className="text-gray-300"
                                     >
                                         取消
                                     </CustomButton>
@@ -2374,7 +2376,7 @@ export default function Settings() {
                                     <CustomButton
                                         variant="blur"
                                         onPress={onClose}
-                                        className="text-white"
+                                        className="text-gray-300"
                                     >
                                         取消
                                     </CustomButton>
@@ -2428,7 +2430,7 @@ export default function Settings() {
                                     <CustomButton
                                         variant="blur"
                                         onPress={onClose}
-                                        className="text-white"
+                                        className="text-gray-300"
                                     >
                                         取消
                                     </CustomButton>
@@ -2486,7 +2488,7 @@ export default function Settings() {
                                     <CustomButton
                                         variant="blur"
                                         onPress={onClose}
-                                        className="text-white"
+                                        className="text-gray-300"
                                     >
                                         取消
                                     </CustomButton>
