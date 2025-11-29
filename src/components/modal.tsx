@@ -47,11 +47,11 @@ const CustomModal = forwardRef<HTMLDivElement, CustomModalProps>(
         const variantClasses = {
             blur: {
                 wrapper: "",
-                base: "bg-zinc-800/65 backdrop-blur-xs border-2 border-white/20 shadow-2xl transition-all",
+                base: "bg-zinc-800/65 backdrop-blur-xs border-2 border-white/20 shadow-2xl transition-all duration-400 ease-in-out overflow-hidden",
                 backdrop: "bg-black/40 backdrop-blur-xs",
-                header: "border-white/20 bg-transparent text-center tracking-wider text-2xl font-semibold flex flex-col items-center",
-                body: "bg-transparent flex flex-col gap-6",
-                footer: "border-white/20 bg-transparent",
+                header: "border-white/20 bg-transparent text-center tracking-wider text-2xl font-semibold flex flex-col items-center transition-all duration-400 ease-in-out",
+                body: "bg-transparent flex flex-col gap-6 transition-all duration-400 ease-in-out",
+                footer: "border-white/20 bg-transparent transition-all duration-400 ease-in-out",
                 closeButton: "text-white hover:bg-white/20 active:bg-white/30",
             },
         };
