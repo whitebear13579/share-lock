@@ -24,10 +24,30 @@ export default function DashboardContentTransition({ children }: DashboardConten
         if (isInitialMount.current) {
             isInitialMount.current = false;
 
-            // If not first visit to any page, perform animation
-            if (globalPrevPathname && globalPrevPathname !== pathname) {
-                const direction = getNavigationDirection(globalPrevPathname, pathname);
+            const isFromHome = typeof window !== "undefined" &&
+                sessionStorage.getItem("pageTransition") === "fromHome";
 
+            if (isFromHome && typeof window !== "undefined") {
+                sessionStorage.removeItem("pageTransition");
+            }
+
+            // If from login/signup page, always perform animation
+            if (isFromHome) {
+                gsap.set(containerRef.current, {
+                    opacity: 0,
+                    x: 100,
+                });
+
+                gsap.to(containerRef.current, {
+                    opacity: 1,
+                    x: 0,
+                    duration: 0.5,
+                    delay: 0.3,
+                    ease: "power2.out",
+                });
+            } else if (globalPrevPathname && globalPrevPathname !== pathname) {
+                // If not first visit to any page, perform animation
+                const direction = getNavigationDirection(globalPrevPathname, pathname);
                 const startX = direction === "left" ? 100 : -100;
 
                 gsap.set(containerRef.current, {
@@ -42,7 +62,7 @@ export default function DashboardContentTransition({ children }: DashboardConten
                     ease: "power2.out",
                 });
             } else {
-                // first load
+                // first load (direct access to dashboard)
                 gsap.set(containerRef.current, { opacity: 1, x: 0 });
             }
 
