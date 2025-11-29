@@ -610,9 +610,7 @@ export default function MyFiles() {
             <UploadFiles
                 isOpen={isUploadModalOpen}
                 onClose={() => setIsUploadModalOpen(false)}
-                onSuccess={(shareId) => {
-                    console.log("files upload success!", shareId);
-                    // Refresh file list after successful upload
+                onSuccess={() => {
                     fetchFiles(activeTab);
                 }}
             />
