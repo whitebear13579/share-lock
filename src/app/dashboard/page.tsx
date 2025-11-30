@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { gsap } from "gsap";
 import { useAuth } from "@/utils/authProvider";
 import { Button } from "@heroui/button";
 import { Cog, Folder, House, LogOut, Star, FileText, ArrowRight, Share2, Check, Lock, X, ClockFading, LockOpen, ExternalLink, BellRing, Trash, ArrowUpRight, ChartPie, MessageCircleQuestionMark } from "lucide-react";
@@ -19,6 +20,8 @@ export default function Dashboard() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const router = useRouter();
+    const fakeMainRef = useRef<HTMLDivElement>(null);
+    const fakeFooterRef = useRef<HTMLDivElement>(null);
     const [storageData, setStorageData] = useState({
         usedBytes: 0,
         quotaBytes: 1024 * 1024 * 1024,
@@ -29,6 +32,112 @@ export default function Dashboard() {
     const [isLoadingStorage, setIsLoadingStorage] = useState(true);
 
     const { user, loading, logout } = useAuth();
+
+    const handleLogout = async () => {
+        console.log("[Dashboard] ==> 開始登出動畫");
+        console.log("[Dashboard] fakeMainRef:", fakeMainRef.current);
+        console.log("[Dashboard] fakeFooterRef:", fakeFooterRef.current);
+
+        return new Promise<void>((resolve) => {
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    (async () => {
+                        const overlayContainer = document.createElement("div");
+                        overlayContainer.id = "logout-transition-overlay";
+                        overlayContainer.className = "fixed inset-0 z-[9999] pointer-events-none bg-neutral-800";
+
+                        const bgPanel = document.createElement("div");
+                        bgPanel.className = "absolute top-0 left-0 right-0 bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 rounded-b-5xl border-b-2 border-b-gray-500 shadow-2xl";
+                        bgPanel.style.bottom = "64px";
+                        overlayContainer.appendChild(bgPanel);
+
+                        const footer = document.createElement("div");
+                        const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+                        footer.className = `absolute bottom-0 left-0 right-0 px-6 py-5 bg-neutral-800 flex flex-shrink-0 ${isDesktop ? 'justify-start' : 'justify-center'}`;
+                        footer.innerHTML = `
+                            <p class="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">
+                                © 2025 <span class="text-blue-500 font-bold">Share Lock</span>&nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.
+                            </p>
+                        `;
+                        overlayContainer.appendChild(footer);
+
+                        document.body.appendChild(overlayContainer);
+
+                        if (typeof window !== "undefined") {
+                            sessionStorage.setItem("fromDashboardLogout", "true");
+                        }
+                        await router.push("/login");
+                        await logout();
+                        resolve();
+                    })();
+                },
+            });
+
+            tl.set([fakeMainRef.current, fakeFooterRef.current], {
+                opacity: 1
+            });
+
+            const footerHeight = 64;
+            tl.to(
+                fakeMainRef.current,
+                {
+                    y: -footerHeight,
+                    duration: 0.8,
+                    ease: "power2.inOut",
+                },
+                "0"
+            );
+
+            tl.to(
+                fakeFooterRef.current,
+                {
+                    translateY: "0%",
+                    duration: 0.6,
+                    ease: "power2.out"
+                },
+                "-=0.4"
+            );
+        });
+    };
+    useEffect(() => {
+        const forceCleanupLoginElements = () => {
+            const allFixedElements = Array.from(document.querySelectorAll('.fixed'));
+
+            allFixedElements.forEach((el) => {
+                const element = el as HTMLElement;
+
+                if (element === fakeMainRef.current || element === fakeFooterRef.current) {
+                    return;
+                }
+
+                const hasInset = element.classList.contains('inset-0');
+
+                const isFakeBg = element.classList.contains('bg-linear-205') && hasInset;
+                const isFakeTab = element.classList.contains('pointer-events-none') &&
+                    element.classList.contains('z-10') &&
+                    hasInset;
+
+                if (isFakeBg || isFakeTab) {
+                    element.remove();
+                }
+            });
+        };
+
+        forceCleanupLoginElements();
+
+        const fromHome = sessionStorage.getItem("pageTransition") === "fromHome";
+        if (fromHome) {
+            sessionStorage.removeItem("pageTransition");
+            setTimeout(forceCleanupLoginElements, 0);
+            setTimeout(forceCleanupLoginElements, 50);
+        }
+
+        if (fakeMainRef.current && fakeFooterRef.current) {
+            gsap.set([fakeMainRef.current, fakeFooterRef.current], {
+                opacity: 0
+            });
+        }
+    }, []);
 
     useEffect(() => {
         const checkScreenSize = () => {
@@ -96,7 +205,7 @@ export default function Dashboard() {
         <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55%">
             {/* wide device naviBar */}
             {!isMobile && (
-                <DashboardNavigation loading={loading} onLogout={logout} />
+                <DashboardNavigation loading={loading} onLogout={handleLogout} />
             )}
 
             {/* mobile device naviBar */}
@@ -189,7 +298,7 @@ export default function Dashboard() {
                                     startContent={
                                         <LogOut size={18} className="text-red-400" />
                                     }
-                                    onPress={logout}
+                                    onPress={handleLogout}
                                     className="h-9 text-red-400"
                                 >
                                     <span className="text-red-400">登出</span>
@@ -814,6 +923,30 @@ export default function Dashboard() {
                     )}
                 </div>
             </DashboardContentTransition>
+
+            {/* Fake elements for logout animation */}
+            <div
+                ref={fakeMainRef}
+                className="fixed top-0 left-0 right-0 bottom-0 bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 rounded-b-5xl border-b-2 border-b-gray-500 shadow-2xl pointer-events-none z-50 -translate-y-[100vh]"
+            />
+            <div
+                ref={fakeFooterRef}
+                className="fixed bottom-0 left-0 right-0 px-6 py-5 bg-neutral-800 flex justify-center md:justify-start flex-shrink-0 pointer-events-none z-40 translate-y-full"
+            >
+                <p className="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">
+                    © 2025{" "}
+                    <span className=" text-blue-500 font-bold">
+                        <NextLink
+                            href="/"
+                            className="hover:underline"
+                            prefetch={false}
+                        >
+                            Share Lock
+                        </NextLink>
+                    </span>
+                    &nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.
+                </p>
+            </div>
         </div>
     );
 }

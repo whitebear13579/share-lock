@@ -1,6 +1,8 @@
 "use client";
-import React from "react";
+import React, { useRef, useState, useEffect } from "react";
+import { gsap } from "gsap";
 import { useAuth } from "@/utils/authProvider";
+import { useRouter } from "next/navigation";
 import { Spinner, Navbar, NavbarContent, NavbarMenuToggle, NavbarBrand, NavbarMenu, NavbarMenuItem, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Avatar, Link } from "@heroui/react";
 import { House, Folder, Cog, Star, MessageCircleQuestionMark, LogOut } from "lucide-react";
 import NextLink from "next/link";
@@ -9,10 +11,116 @@ import DashboardContentTransition from "@/components/dashboardContentTransition"
 
 export default function BugReport() {
     const { user, loading, logout } = useAuth();
-    const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-    const [isMobile, setIsMobile] = React.useState(false);
+    const router = useRouter();
+    const fakeMainRef = useRef<HTMLDivElement>(null);
+    const fakeFooterRef = useRef<HTMLDivElement>(null);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
-    React.useEffect(() => {
+    const handleLogout = async () => {
+        return new Promise<void>((resolve) => {
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    (async () => {
+                        const overlayContainer = document.createElement("div");
+                        overlayContainer.id = "logout-transition-overlay";
+                        overlayContainer.className = "fixed inset-0 z-[9999] pointer-events-none bg-neutral-800";
+
+                        const bgPanel = document.createElement("div");
+                        bgPanel.className = "absolute top-0 left-0 right-0 bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 rounded-b-5xl border-b-2 border-b-gray-500 shadow-2xl";
+                        bgPanel.style.bottom = "64px";
+                        overlayContainer.appendChild(bgPanel);
+
+                        const footer = document.createElement("div");
+                        const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+                        footer.className = `absolute bottom-0 left-0 right-0 px-6 py-5 bg-neutral-800 flex flex-shrink-0 ${isDesktop ? 'justify-start' : 'justify-center'}`;
+                        footer.innerHTML = `
+                            <p class="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">
+                                © 2025 <span class="text-blue-500 font-bold">Share Lock</span>&nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.
+                            </p>
+                        `;
+                        overlayContainer.appendChild(footer);
+
+                        document.body.appendChild(overlayContainer);
+
+                        if (typeof window !== "undefined") {
+                            sessionStorage.setItem("fromDashboardLogout", "true");
+                        }
+                        await router.push("/login");
+                        await logout();
+                        resolve();
+                    })();
+                },
+            });
+
+            tl.set([fakeMainRef.current, fakeFooterRef.current], {
+                opacity: 1
+            });
+
+            const footerHeight = 64;
+            tl.to(
+                fakeMainRef.current,
+                {
+                    y: -footerHeight,
+                    duration: 0.8,
+                    ease: "power2.inOut",
+                },
+                "0"
+            );
+
+            tl.to(
+                fakeFooterRef.current,
+                {
+                    translateY: "0%",
+                    duration: 0.6,
+                    ease: "power2.out"
+                },
+                "-=0.4"
+            );
+        });
+    };
+
+    useEffect(() => {
+        const forceCleanupLoginElements = () => {
+            const allFixedElements = Array.from(document.querySelectorAll('.fixed'));
+
+            allFixedElements.forEach((el) => {
+                const element = el as HTMLElement;
+
+                if (element === fakeMainRef.current || element === fakeFooterRef.current) {
+                    return;
+                }
+
+                const hasInset = element.classList.contains('inset-0');
+
+                const isFakeBg = element.classList.contains('bg-linear-205') && hasInset;
+                const isFakeTab = element.classList.contains('pointer-events-none') &&
+                    element.classList.contains('z-10') &&
+                    hasInset;
+
+                if (isFakeBg || isFakeTab) {
+                    element.remove();
+                }
+            });
+        };
+
+        forceCleanupLoginElements();
+
+        const fromHome = sessionStorage.getItem("pageTransition") === "fromHome";
+        if (fromHome) {
+            sessionStorage.removeItem("pageTransition");
+            setTimeout(forceCleanupLoginElements, 0);
+            setTimeout(forceCleanupLoginElements, 50);
+        }
+
+        if (fakeMainRef.current && fakeFooterRef.current) {
+            gsap.set([fakeMainRef.current, fakeFooterRef.current], {
+                opacity: 0
+            });
+        }
+    }, []);
+
+    useEffect(() => {
         const checkScreenSize = () => {
             setIsMobile(window.innerWidth < 1536);
         };
@@ -44,7 +152,7 @@ export default function BugReport() {
     return (
         <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55%">
             {!isMobile && (
-                <DashboardNavigation loading={loading} onLogout={logout} />
+                <DashboardNavigation loading={loading} onLogout={handleLogout} />
             )}
 
             {isMobile && (
@@ -136,7 +244,7 @@ export default function BugReport() {
                                     startContent={
                                         <LogOut size={18} className="text-red-400" />
                                     }
-                                    onPress={logout}
+                                    onPress={handleLogout}
                                     className="h-9 text-red-400"
                                 >
                                     <span className="text-red-400">登出</span>
@@ -180,10 +288,33 @@ export default function BugReport() {
                         🐛 漏洞有賞計畫
                     </h1>
                     <p className="text-gray-300 text-lg">
-                        發現問題？回報給我們，一起讓 Share Lock 更安全！
+                        發現問題?回報給我們,一起讓 Share Lock 更安全!
                     </p>
                 </div>
             </DashboardContentTransition>
+
+            {/* Fake elements for logout animation */}
+            <div
+                ref={fakeMainRef}
+                className="fixed top-0 left-0 right-0 bottom-0 bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 rounded-b-5xl border-b-2 border-b-gray-500 shadow-2xl pointer-events-none z-50 -translate-y-[100vh]"
+            />
+            <div
+                ref={fakeFooterRef}
+                className="fixed bottom-0 left-0 right-0 px-6 py-5 bg-neutral-800 flex justify-center md:justify-start flex-shrink-0 pointer-events-none z-40 translate-y-full"
+            >
+                <p className="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">
+                    © 2025{" "}
+                    <span className=" text-blue-500 font-bold">
+                        <NextLink
+                            href="/"
+                            className="hover:underline"
+                        >
+                            Share Lock
+                        </NextLink>
+                    </span>
+                    &nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.
+                </p>
+            </div>
         </div>
     );
 }
