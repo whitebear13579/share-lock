@@ -16,6 +16,7 @@ import {
     verifyAuthenticator
 } from "@/utils/webauthn";
 import { hashPin } from "@/utils/crypto";
+import { CircleX, ArrowLeft, Download, FileText } from "lucide-react";
 
 type ShareMode = "device" | "account" | "pin" | "public";
 
@@ -454,243 +455,352 @@ export default function SharePage() {
     }, [error]);
 
     useEffect(() => {
-        if (containerRef.current && !isLoading) {
-            gsap.fromTo(
-                containerRef.current,
-                { opacity: 0, y: 50 },
-                { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }
-            );
+        if (isLoading && containerRef.current) {
+            gsap.set(containerRef.current, {
+                y: -100,
+                opacity: 0,
+            });
+
+            gsap.to(containerRef.current, {
+                y: 0,
+                opacity: 1,
+                duration: 0.4,
+                ease: "back.out(1.2)",
+            });
         }
     }, [isLoading]);
 
+    useEffect(() => {
+        if (!isLoading && containerRef.current && (shareData || error)) {
+            gsap.set(containerRef.current, {
+                y: -100,
+                opacity: 0,
+            });
+
+            gsap.to(containerRef.current, {
+                y: 0,
+                opacity: 1,
+                duration: 0.4,
+                ease: "back.out(1.2)",
+            });
+        }
+    }, [isLoading, shareData, error]);
+
     return (
         <PageTransition>
-            <div className="flex flex-col min-h-screen bg-neutral-800 items-center justify-center p-4">
-                {isLoading && (
-                    <div className="flex flex-col items-center gap-4">
-                        <Spinner size="lg" color="primary" />
-                        <div className="text-gray-300">載入中...</div>
-                    </div>
-                )}
-
-                {!isLoading && error && !shareData && (
-                    <div
-                        ref={containerRef}
-                        className="bg-zinc-800/80 backdrop-blur-sm border-2 border-white/20 rounded-2xl p-8 max-w-md w-full"
-                    >
-                        <div className="text-red-400 text-xl font-semibold text-center mb-4">
-                            ✕ {error}
+            <div className="flex flex-col min-h-screen max-h-screen bg-neutral-800 overflow-hidden">
+                <div className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
+                    {isLoading && (
+                        <div
+                            ref={containerRef}
+                            className="flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide"
+                        >
+                            <Spinner
+                                size="lg"
+                                color="default"
+                                label="載入分享資訊中"
+                                classNames={{
+                                    label: "text-white font-bold text-xl",
+                                }}
+                            />
                         </div>
-                        <Link href="/dashboard">
-                            <CustomButton className="w-full">
-                                返回儀表板
-                            </CustomButton>
-                        </Link>
-                    </div>
-                )}
+                    )}
 
-                {!isLoading && shareData && fileData && (
-                    <div
-                        ref={containerRef}
-                        className="bg-zinc-800/80 backdrop-blur-sm border-2 border-white/20 rounded-2xl p-8 max-w-md w-full"
-                    >
-                        <h1 className="text-2xl font-bold text-white text-center mb-6">
-                            {verified ? "檔案下載" : "檔案分享"}
-                        </h1>
-
-                        {error && (
-                            <div
-                                ref={errorBoxRef}
-                                className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm"
-                            >
+                    {!isLoading && error && !shareData && (
+                        <div
+                            ref={containerRef}
+                            className="flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/3 xl:w-1/4 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide gap-4"
+                        >
+                            <CircleX size={64} className="text-red-500" />
+                            <div className="text-2xl font-bold text-white">
+                                無法載入分享
+                            </div>
+                            <div className="text-gray-300 text-base text-center">
                                 {error}
                             </div>
-                        )}
-
-                        {downloadSuccess && (
-                            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-300 text-sm">
-                                ✓ 下載已開始！剩餘次數：{fileData.remainingDownloads}
-                            </div>
-                        )}
-
-                        <div className="flex flex-col gap-4">
-                            <div className="p-4 bg-white/5 rounded-lg">
-                                <div className="text-gray-400 text-sm mb-1">
-                                    檔案名稱
-                                </div>
-                                <div className="text-white font-medium">
-                                    {fileData.displayName}
-                                </div>
-                            </div>
-
-                            {verified && (
-                                <>
-                                    <div className="flex gap-4">
-                                        <div className="flex-1 p-4 bg-white/5 rounded-lg">
-                                            <div className="text-gray-400 text-sm mb-1">
-                                                檔案大小
-                                            </div>
-                                            <div className="text-white font-medium">
-                                                {formatBytes(fileData.size)}
-                                            </div>
-                                        </div>
-                                        <div className="flex-1 p-4 bg-white/5 rounded-lg">
-                                            <div className="text-gray-400 text-sm mb-1">
-                                                檔案類型
-                                            </div>
-                                            <div className="text-white font-medium text-sm">
-                                                {fileData.contentType || "未知"}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            <div className="flex gap-4">
-                                <div className="flex-1 p-4 bg-white/5 rounded-lg">
-                                    <div className="text-gray-400 text-sm mb-1">
-                                        剩餘下載次數
-                                    </div>
-                                    <div className="text-white font-bold text-xl">
-                                        {!fileData.maxDownloads || fileData.maxDownloads === 0
-                                            ? "無限制"
-                                            : fileData.remainingDownloads}
-                                    </div>
-                                </div>
-                                <div className="flex-1 p-4 bg-white/5 rounded-lg">
-                                    <div className="text-gray-400 text-sm mb-1">
-                                        到期日
-                                    </div>
-                                    <div className="text-white font-medium text-sm">
-                                        {fileData.expiresAt
-                                            .toDate()
-                                            .toLocaleDateString("zh-TW", {
-                                                year: "numeric",
-                                                month: "2-digit",
-                                                day: "2-digit",
-                                            })}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-2 items-center">
-                                <Chip
-                                    color={
-                                        fileData.shareMode === "public"
-                                            ? "default"
-                                            : "primary"
-                                    }
-                                    variant="flat"
-                                    size="sm"
-                                >
-                                    {fileData.shareMode === "public" && "未鎖定"}
-                                    {fileData.shareMode === "pin" && "密碼鎖定"}
-                                    {fileData.shareMode === "device" && "裝置綁定"}
-                                    {fileData.shareMode === "account" && "帳號綁定"}
-                                </Chip>
-                            </div>
-
-                            {needsAuth && (
-                                <div className="p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-yellow-300 text-sm">
-                                    此檔案需要登入才能存取，請先
-                                    <Link
-                                        href="/login"
-                                        className="underline ml-1"
-                                    >
-                                        登入
-                                    </Link>
-                                </div>
-                            )}
-
-                            {!verified && fileData.shareMode === "pin" && !needsAuth && (
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-gray-300 text-sm">
-                                        請輸入 6 位數 PIN：
-                                    </label>
-                                    <InputOtp
-                                        length={6}
-                                        value={pinInput}
-                                        onValueChange={setPinInput}
-                                    />
-                                </div>
-                            )}
-
-                            {!verified && fileData.shareMode === "device" && !needsAuth && (
-                                <div className="flex flex-col gap-2">
-                                    {fileData.allowedDevices.length === 0 ? (
-                                        <>
-                                            {!user ? (
-                                                <div className="p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-yellow-300 text-sm">
-                                                    裝置綁定需要先登入帳號，請先
-                                                    <Link
-                                                        href="/login"
-                                                        className="underline ml-1"
-                                                    >
-                                                        登入
-                                                    </Link>
-                                                    後再進行綁定
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <label className="text-gray-300 text-sm">
-                                                        首次綁定裝置，請為此裝置命名：
-                                                    </label>
-                                                    <CustomInput
-                                                        placeholder="例如：我的 MacBook Pro"
-                                                        value={deviceLabel}
-                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDeviceLabel(e.target.value)}
-                                                        className="w-full"
-                                                    />
-                                                    <div className="text-gray-400 text-xs mt-1">
-                                                        將使用 {webAuthnSupported ? "Touch ID / Face ID / Windows Hello" : "瀏覽器驗證"} 進行裝置綁定
-                                                    </div>
-                                                </>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="p-4 bg-blue-500/20 border border-blue-500/50 rounded-lg text-blue-300 text-sm">
-                                            此檔案已綁定裝置，請使用 Touch ID / Face ID / Windows Hello 驗證
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {!verified && !needsAuth && !(fileData.shareMode === "device" && fileData.allowedDevices.length === 0 && !user) && (
+                            <Link
+                                href="/dashboard"
+                                prefetch={false}
+                                className="w-[180px]"
+                            >
                                 <CustomButton
-                                    onClick={handleVerification}
-                                    isDisabled={isVerifying}
-                                    isLoading={isVerifying}
-                                    className="w-full mt-4"
+                                    variant="blur"
+                                    size="lg"
+                                    radius="full"
+                                    className="w-full text-lg hover:bg-white/20 text-gray-200"
+                                    startContent={<ArrowLeft size={20} />}
                                 >
-                                    {fileData.shareMode === "public"
-                                        ? "繼續"
-                                        : "驗證並存取"}
-                                </CustomButton>
-                            )}
-
-                            {verified && (
-                                <CustomButton
-                                    onClick={handleDownload}
-                                    isDisabled={
-                                        isDownloading || fileData.remainingDownloads <= 0
-                                    }
-                                    isLoading={isDownloading}
-                                    className="w-full mt-4"
-                                >
-                                    {fileData.remainingDownloads > 0
-                                        ? "下載檔案"
-                                        : "下載次數已用盡"}
-                                </CustomButton>
-                            )}
-
-                            <Link href="/dashboard" className="mt-2">
-                                <CustomButton variant="blur" className="w-full">
                                     返回儀表板
                                 </CustomButton>
                             </Link>
                         </div>
-                    </div>
-                )}
+                    )}
+
+                    {!isLoading && shareData && fileData && (
+                        <div
+                            ref={containerRef}
+                            className="flex flex-col items-center justify-center relative border-4 border-white/20 w-[90%] sm:w-2/3 lg:w-1/2 xl:w-2/5 2xl:w-1/3 min-h-28 rounded-xl px-8 py-6 bg-white/5 backdrop-blur-xl shadow-2xl font-medium tracking-wide"
+                        >
+                            <div className="flex items-center justify-center w-full text-3xl font-bold text-white pb-4">
+                                <FileText className="mr-3" size={32} />
+                                {verified ? "檔案下載" : "檔案分享"}
+                            </div>
+
+                            {error && (
+                                <div
+                                    ref={errorBoxRef}
+                                    className="w-full max-w-md p-2 border-2 rounded-full text-sm text-center flex items-center justify-center gap-2 bg-red-500/20 border-red-500/50 text-red-200 mb-3"
+                                >
+                                    <CircleX size={16} />
+                                    <span className="leading-relaxed break-words">
+                                        {error}
+                                    </span>
+                                </div>
+                            )}
+
+                            {downloadSuccess && (
+                                <div className="w-full max-w-md p-2 border-2 rounded-full text-sm text-center flex items-center justify-center gap-2 bg-green-500/20 border-green-500/50 text-green-200 mb-3">
+                                    <Download size={16} />
+                                    <span className="leading-relaxed break-words">
+                                        下載已開始！剩餘次數：{fileData.remainingDownloads}
+                                    </span>
+                                </div>
+                            )}
+
+                            <div className="w-full max-w-2xl flex flex-col items-center transition-all duration-300 ease-out space-y-4">
+                                <div className="w-full p-4 bg-white/10 rounded-xl border border-white/20">
+                                    <div className="text-gray-300 text-sm mb-1">
+                                        檔案名稱
+                                    </div>
+                                    <div className="text-white font-semibold text-lg break-all">
+                                        {fileData.displayName}
+                                    </div>
+                                </div>
+
+                                {verified && (
+                                    <div className="w-full flex gap-3">
+                                        <div className="flex-1 p-4 bg-white/10 rounded-xl border border-white/20">
+                                            <div className="text-gray-300 text-sm mb-1">
+                                                檔案大小
+                                            </div>
+                                            <div className="text-white font-semibold">
+                                                {formatBytes(fileData.size)}
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 p-4 bg-white/10 rounded-xl border border-white/20">
+                                            <div className="text-gray-300 text-sm mb-1">
+                                                檔案類型
+                                            </div>
+                                            <div className="text-white font-semibold text-sm break-all">
+                                                {fileData.contentType || "未知"}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="w-full flex gap-3">
+                                    <div className="flex-1 p-4 bg-white/10 rounded-xl border border-white/20">
+                                        <div className="text-gray-300 text-sm mb-1">
+                                            剩餘下載次數
+                                        </div>
+                                        <div className="text-white font-bold text-xl">
+                                            {!fileData.maxDownloads || fileData.maxDownloads === 0
+                                                ? "無限制"
+                                                : fileData.remainingDownloads}
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 p-4 bg-white/10 rounded-xl border border-white/20">
+                                        <div className="text-gray-300 text-sm mb-1">
+                                            到期日
+                                        </div>
+                                        <div className="text-white font-semibold">
+                                            {fileData.expiresAt
+                                                .toDate()
+                                                .toLocaleDateString("zh-TW", {
+                                                    year: "numeric",
+                                                    month: "2-digit",
+                                                    day: "2-digit",
+                                                })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="w-full flex gap-2 items-center justify-center">
+                                    <Chip
+                                        color={
+                                            fileData.shareMode === "public"
+                                                ? "default"
+                                                : "primary"
+                                        }
+                                        variant="flat"
+                                        size="md"
+                                        classNames={{
+                                            base: "border-white/30",
+                                        }}
+                                    >
+                                        {fileData.shareMode === "public" && "未鎖定"}
+                                        {fileData.shareMode === "pin" && "密碼鎖定"}
+                                        {fileData.shareMode === "device" && "裝置綁定"}
+                                        {fileData.shareMode === "account" && "帳號綁定"}
+                                    </Chip>
+                                </div>
+
+                                {needsAuth && (
+                                    <div className="w-full p-4 bg-yellow-500/20 border-2 border-yellow-500/50 rounded-xl text-yellow-200 text-sm text-center">
+                                        此檔案需要登入才能存取，請先
+                                        <Link
+                                            href="/login"
+                                            className="underline ml-1 font-semibold hover:text-yellow-100"
+                                            prefetch={false}
+                                        >
+                                            登入
+                                        </Link>
+                                    </div>
+                                )}
+
+                                {!verified && fileData.shareMode === "pin" && !needsAuth && (
+                                    <div className="w-full flex flex-col gap-3">
+                                        <label className="text-gray-200 text-sm font-medium text-center">
+                                            請輸入 6 位數 PIN 碼：
+                                        </label>
+                                        <div className="flex justify-center">
+                                            <InputOtp
+                                                length={6}
+                                                value={pinInput}
+                                                onValueChange={setPinInput}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!verified && fileData.shareMode === "device" && !needsAuth && (
+                                    <div className="w-full flex flex-col gap-3">
+                                        {fileData.allowedDevices.length === 0 ? (
+                                            <>
+                                                {!user ? (
+                                                    <div className="p-4 bg-yellow-500/20 border-2 border-yellow-500/50 rounded-xl text-yellow-200 text-sm text-center">
+                                                        裝置綁定需要先登入帳號，請先
+                                                        <Link
+                                                            href="/login"
+                                                            className="underline ml-1 font-semibold hover:text-yellow-100"
+                                                            prefetch={false}
+                                                        >
+                                                            登入
+                                                        </Link>
+                                                        後再進行綁定
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <label className="text-gray-200 text-sm font-medium text-center">
+                                                            首次綁定裝置，請為此裝置命名：
+                                                        </label>
+                                                        <CustomInput
+                                                            placeholder="例如：我的 MacBook Pro"
+                                                            value={deviceLabel}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDeviceLabel(e.target.value)}
+                                                            className="w-full"
+                                                        />
+                                                        <div className="text-gray-300 text-xs text-center">
+                                                            將使用 {webAuthnSupported ? "Touch ID / Face ID / Windows Hello" : "瀏覽器驗證"} 進行裝置綁定
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div className="p-4 bg-blue-500/20 border-2 border-blue-500/50 rounded-xl text-blue-200 text-sm text-center">
+                                                此檔案已綁定裝置，請使用 Touch ID / Face ID / Windows Hello 驗證
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {!verified && !needsAuth && !(fileData.shareMode === "device" && fileData.allowedDevices.length === 0 && !user) && (
+                                    <div className="flex w-full justify-center mt-2">
+                                        <CustomButton
+                                            variant="blur"
+                                            size="lg"
+                                            radius="full"
+                                            onClick={handleVerification}
+                                            isDisabled={isVerifying}
+                                            isLoading={isVerifying}
+                                            className="w-[200px] text-white bg-blue-500 border-0 text-lg"
+                                            spinner={
+                                                <Spinner
+                                                    size="sm"
+                                                    color="default"
+                                                />
+                                            }
+                                        >
+                                            {fileData.shareMode === "public"
+                                                ? "繼續"
+                                                : "驗證並存取"}
+                                        </CustomButton>
+                                    </div>
+                                )}
+
+                                {verified && (
+                                    <div className="flex w-full justify-center mt-2">
+                                        <CustomButton
+                                            variant="blur"
+                                            size="lg"
+                                            radius="full"
+                                            onClick={handleDownload}
+                                            isDisabled={
+                                                isDownloading || fileData.remainingDownloads <= 0
+                                            }
+                                            isLoading={isDownloading}
+                                            className="w-[200px] text-white bg-green-500 border-0 text-lg"
+                                            startContent={
+                                                !isDownloading ? (
+                                                    <Download size={20} />
+                                                ) : undefined
+                                            }
+                                            spinner={
+                                                <Spinner
+                                                    size="sm"
+                                                    color="default"
+                                                />
+                                            }
+                                        >
+                                            {fileData.remainingDownloads > 0
+                                                ? "下載檔案"
+                                                : "下載次數已用盡"}
+                                        </CustomButton>
+                                    </div>
+                                )}
+
+                                <div className="flex w-full justify-center items-center">
+                                    <Link href="/dashboard" className="w-[200px]" prefetch={false}>
+                                        <CustomButton
+                                            variant="blur"
+                                            size="lg"
+                                            radius="full"
+                                            className="w-full hover:bg-white/20 text-gray-200 text-lg"
+                                            startContent={<ArrowLeft size={20} />}
+                                        >
+                                            返回儀表板
+                                        </CustomButton>
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <div className="px-6 py-5 flex w-full flex-shrink-0 justify-center md:justify-start">
+                    <p className="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">
+                        © 2025{" "}
+                        <span className="text-blue-500 font-bold">
+                            <Link
+                                href="/"
+                                className="hover:underline"
+                                prefetch={false}
+                            >
+                                Share Lock
+                            </Link>
+                        </span>
+                        &nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.
+                    </p>
+                </div>
             </div>
         </PageTransition>
     );
