@@ -133,7 +133,7 @@ export default function BugReport() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-neutral-800 flex items-center justify-center">
+            <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55% flex items-center justify-center">
                 <Spinner
                     classNames={{ label: "text-xl text-white" }}
                     variant="dots"
