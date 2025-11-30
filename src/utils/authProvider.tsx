@@ -33,19 +33,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            setUser(user);
-            setLoading(false);
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            const currentPath = window.location.pathname;
+            const publicPaths = ['/login', '/signup', '/reset-password', '/privacy-policy', '/terms-of-service', '/share', '/auth-action'];
+            const isPublicPath = currentPath === '/' || publicPaths.some(path => currentPath.startsWith(path));
 
-            if (!user) {
-                const currentPath = window.location.pathname;
-                const publicPaths = ['/', '/login', '/signup', '/reset-password', '/privacy-policy', '/terms-of-service', '/share'];
-                const isPublicPath = publicPaths.some(path => currentPath.startsWith(path));
-
-                if (!isPublicPath) {
-                    router.push("/login");
-                }
+            if (!currentUser && !isPublicPath) {
+                window.location.href = '/login';
+                return;
             }
+
+            setUser(currentUser);
+            setLoading(false);
         });
 
         return () => unsubscribe();
