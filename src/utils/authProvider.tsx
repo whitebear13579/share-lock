@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/utils/firebase";
 import { useRouter } from "next/navigation";
@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+    const isLoggingOut = useRef(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -38,7 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const publicPaths = ['/login', '/signup', '/reset-password', '/privacy-policy', '/terms-of-service', '/share', '/auth-action'];
             const isPublicPath = currentPath === '/' || publicPaths.some(path => currentPath.startsWith(path));
 
-            if (!currentUser && !isPublicPath) {
+            if (!currentUser && !isPublicPath && !isLoggingOut.current) {
                 window.location.href = '/login';
                 return;
             }
@@ -51,11 +52,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, [router]);
 
     const logout = async () => {
+        isLoggingOut.current = true;
         try {
-            router.push("/login");
             await signOut(auth);
-        } catch (error) {
-            console.error("Logout Error! This is an internal error!", error);
+        } finally {
+            setTimeout(() => {
+                isLoggingOut.current = false;
+            }, 1000);
         }
     };
 
