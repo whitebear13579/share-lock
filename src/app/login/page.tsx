@@ -381,6 +381,27 @@ export default function Login() {
     useEffect(() => {
         if (!formContainerRef.current) return;
 
+        const fromDashboard = typeof window !== "undefined" &&
+            sessionStorage.getItem("fromDashboardLogout") === "true";
+
+        if (fromDashboard) {
+
+            const overlay = document.getElementById("logout-transition-overlay");
+            if (overlay) {
+                gsap.to(overlay, {
+                    opacity: 0,
+                    duration: 0.4,
+                    delay: 0.1,
+                    ease: "power2.out",
+                    onComplete: () => {
+                        overlay.remove();
+                    }
+                });
+            }
+
+            sessionStorage.removeItem("fromDashboardLogout");
+        }
+
         gsap.set(formContainerRef.current, {
             y: -100,
             opacity: 0,
