@@ -379,7 +379,7 @@ export default function Login() {
     };
 
     useEffect(() => {
-        if (!formContainerRef.current) return;
+        if (loading || isRedirecting || !formContainerRef.current) return;
 
         const fromDashboard = typeof window !== "undefined" &&
             sessionStorage.getItem("fromDashboardLogout") === "true";
@@ -422,12 +422,12 @@ export default function Login() {
                 display: "none",
             });
         }
-    }, []);
+    }, [loading, isRedirecting]);
 
     useEffect(() => {
-        if (error && errorBoxRef.current) {
+        if (error && error.trim() && errorBoxRef.current) {
             animateErrorBox();
-        } else if (!error && errorBoxRef.current) {
+        } else if ((!error || !error.trim()) && errorBoxRef.current) {
             hideErrorBox();
         }
     }, [error]);
@@ -546,14 +546,16 @@ export default function Login() {
                 </div>
                 <div className="px-6 py-5 flex w-full flex-shrink-0 justify-center md:justify-start">
                     <p className="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">
-                        © 2025
-                        <Link
-                            className="text-gray-300"
-                            href="/"
-                            style={{ textDecoration: "none" }}
-                        >
-                            &nbsp;Share Lock
-                        </Link>
+                        © 2025{" "}
+                        <span className=" text-blue-500 font-bold">
+                            <Link
+                                href="/"
+                                className="hover:underline"
+                                prefetch={false}
+                            >
+                                Share Lock
+                            </Link>
+                        </span>
                         &nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.
                     </p>
                 </div>
@@ -572,24 +574,26 @@ export default function Login() {
                         <div className="flex items-center justify-center w-full text-3xl font-bold text-white pb-4">
                             登入
                         </div>
-                        <div
-                            ref={errorBoxRef}
-                            className={`w-full max-w-md p-1.5 border-2 rounded-full text-sm text-center flex items-center justify-center gap-2 ${resetEmailSent
-                                ? "bg-green-500/20 border-green-500/50 text-green-200"
-                                : "bg-red-500/20 border-red-500/50 text-red-200"
-                                }`}
-                        >
-                            <div className="flex-shrink-0">
-                                {resetEmailSent ? (
-                                    <CircleCheck size={16} />
-                                ) : (
-                                    <CircleAlert size={16} />
-                                )}
+                        {error && (
+                            <div
+                                ref={errorBoxRef}
+                                className={`w-full max-w-md p-1.5 border-2 rounded-full text-sm text-center flex items-center justify-center gap-2 ${resetEmailSent
+                                    ? "bg-green-500/20 border-green-500/50 text-green-200"
+                                    : "bg-red-500/20 border-red-500/50 text-red-200"
+                                    }`}
+                            >
+                                <div className="flex-shrink-0">
+                                    {resetEmailSent ? (
+                                        <CircleCheck size={16} />
+                                    ) : (
+                                        <CircleAlert size={16} />
+                                    )}
+                                </div>
+                                <span className="leading-relaxed break-words">
+                                    {error}
+                                </span>
                             </div>
-                            <span className="leading-relaxed break-words">
-                                {error}
-                            </span>
-                        </div>
+                        )}
                         <div
                             className={`w-full max-w-md flex flex-col items-center transition-[gap,margin,padding] duration-300 ease-out ${!emailError && !passwordError ? "space-y-8" : "space-y-6"}`}
                         >
