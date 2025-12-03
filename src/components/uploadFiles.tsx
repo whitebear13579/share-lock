@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { useAuth } from "@/utils/authProvider";
 import { db, storage } from "@/utils/firebase";
 import {
@@ -152,6 +152,9 @@ export default function UploadFiles({ isOpen, onClose, onSuccess }: Props) {
     const errorBoxRef = useRef<HTMLDivElement>(null);
     const pinBoxRef = useRef<HTMLDivElement>(null);
     const chipRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    const progressValueRef = useRef<HTMLDivElement>(null);
+    const [displayProgress, setDisplayProgress] = useState(0);
+    const lastProgressRef = useRef(0);
 
     const resetState = () => {
         setStep("select");
@@ -173,6 +176,8 @@ export default function UploadFiles({ isOpen, onClose, onSuccess }: Props) {
         setGeneratedPin("");
         setShareUrl("");
         setIsCreatingShare(false);
+        setDisplayProgress(0);
+        lastProgressRef.current = 0;
     };
 
     const checkUserQuota = async (
@@ -553,6 +558,41 @@ export default function UploadFiles({ isOpen, onClose, onSuccess }: Props) {
         onClose();
     };
 
+    const animateProgressChange = useCallback((newValue: number) => {
+        const rounded = Math.round(newValue);
+        const valueRef = progressValueRef.current;
+
+        if (valueRef && rounded !== displayProgress) {
+            const tl = gsap.timeline();
+
+            tl.to(valueRef, {
+                y: -12,
+                opacity: 0,
+                duration: 0.1,
+                ease: "power2.in",
+            })
+                .call(() => setDisplayProgress(rounded))
+                .set(valueRef, { y: 12 })
+                .to(valueRef, {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.12,
+                    ease: "power2.out",
+                });
+        } else {
+            setDisplayProgress(rounded);
+        }
+    }, [displayProgress]);
+
+    useEffect(() => {
+        const currentProgress = Math.round(uploadProgress[files[0]?.id] || 0);
+
+        if (currentProgress !== lastProgressRef.current) {
+            animateProgressChange(currentProgress);
+            lastProgressRef.current = currentProgress;
+        }
+    }, [uploadProgress, files, animateProgressChange]);
+
     useEffect(() => {
         if (shareSettings.shareMode === "pin" && !generatedPin) {
             generatePin();
@@ -790,7 +830,7 @@ export default function UploadFiles({ isOpen, onClose, onSuccess }: Props) {
                             {error && (
                                 <div
                                     ref={errorBoxRef}
-                                    className="p-1.5 bg-red-500/20 border-2 border-red-500/50 rounded-full text-red-300 text-sm flex flex-row items-center justify-center gap-2"
+                                    className="p-1.5 bg-red-500/20 border-2 border-red-500/50 rounded-lg text-red-300 text-sm flex flex-row items-center justify-center gap-2"
                                 >
                                     <CircleAlert size={18} />{error}
                                 </div>
@@ -801,7 +841,7 @@ export default function UploadFiles({ isOpen, onClose, onSuccess }: Props) {
                                 <div className="flex flex-col gap-4">
                                     {!user ? (
                                         <>
-                                            <div className="p-1.5 bg-yellow-500/20 border-2 border-yellow-500/50 rounded-full text-yellow-300 text-sm flex flex-row items-center justify-center gap-2 tracking-wider">
+                                            <div className="p-1.5 bg-yellow-500/20 border-2 border-yellow-500/50 rounded-lg text-yellow-300 text-sm flex flex-row items-center justify-center gap-2 tracking-wider">
                                                 <CircleAlert size={18} />請先登入
                                             </div>
                                             <div
@@ -897,17 +937,26 @@ export default function UploadFiles({ isOpen, onClose, onSuccess }: Props) {
                                 <div className="flex flex-col items-center gap-6 py-8">
                                     <CircularProgress
                                         size="lg"
-                                        value={uploadProgress[files[0]?.id] || 0}
-                                        showValueLabel
+                                        value={Math.round(uploadProgress[files[0]?.id] || 0)}
+                                        showValueLabel={true}
                                         aria-label="檔案上傳進度"
                                         classNames={{
                                             base: "w-32 h-32",
                                             svg: "w-32 h-32",
                                             indicator: "stroke-emerald-500",
                                             track: "stroke-white/20",
-                                            value: "text-2xl font-semibold text-white",
                                         }}
                                         strokeWidth={3}
+                                        valueLabel={
+                                            <div className="flex items-center justify-center w-full h-full">
+                                                <div
+                                                    ref={progressValueRef}
+                                                    className="text-2xl font-semibold text-white tabular-nums"
+                                                >
+                                                    {Math.round(displayProgress)}%
+                                                </div>
+                                            </div>
+                                        }
                                     />
                                 </div>
                             )}
