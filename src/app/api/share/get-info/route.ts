@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
         if (!shareId) {
             return NextResponse.json(
-                { error: "shareId missing" },
+                { error: "缺少 shareId" },
                 { status: 400 }
             );
         }
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
         if (!shareDoc.exists) {
             return NextResponse.json(
-                { error: "link not exist or expired" },
+                { error: "連結不存在或已過期" },
                 { status: 404 }
             );
         }
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         if (!shareData?.valid && !isAccountBound) {
             return NextResponse.json(
-                { error: "link invalid" },
+                { error: "連結已失效" },
                 { status: 403 }
             );
         }
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
         if (!fileDoc.exists) {
             return NextResponse.json(
-                { error: "file not exist" },
+                { error: "檔案不存在" },
                 { status: 404 }
             );
         }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
         if (!fileData) {
             return NextResponse.json(
-                { error: "file data not exist" },
+                { error: "無法取得檔案資料" },
                 { status: 404 }
             );
         }
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         const expiresAt = fileData.expiresAt?.toDate().getTime();
         if (expiresAt && now > expiresAt) {
             return NextResponse.json(
-                { error: "link expired" },
+                { error: "連結已過期" },
                 { status: 403 }
             );
         }
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         // check revocation
         if (shareData.revoked) {
             return NextResponse.json(
-                { error: "link revoked" },
+                { error: "此分享已被撤銷" },
                 { status: 403 }
             );
         }
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         const remainingDownloads = fileData.remainingDownloads || 0;
         if (typeof maxDownloads === 'number' && maxDownloads > 0 && remainingDownloads <= 0) {
             return NextResponse.json(
-                { error: "download limit reached" },
+                { error: "下載次數已達上限" },
                 { status: 403 }
             );
         }
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error("failed to get share files info:", error);
         return NextResponse.json(
-            { error: "internal server error" },
+            { error: "伺服器錯誤，請稍後再試" },
             { status: 500 }
         );
     }
