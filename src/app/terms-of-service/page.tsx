@@ -119,7 +119,7 @@ export default function Terms() {
                             <CardBody className="px-6 py-1">
                                 <div className="px-1">
                                     <div className="items-center py-3">
-                                    <p className="text-gray-300 py-2 text-sm">To use most features, you must create an account. You are responsible for maintaining the confidentiality of your login credentials and all activities under your account.<br />If you suspect unauthorized use, notify us immediately at @gmail.com.</p>
+                                    <p className="text-gray-300 py-2 text-sm">To use most features, you must create an account. You are responsible for maintaining the confidentiality of your login credentials and all activities under your account.<br />If you suspect unauthorized use, notify us immediately at contact@sharelock.qzz.io.</p>
                                     </div>
                                 </div>
                             </CardBody>
@@ -245,7 +245,7 @@ export default function Terms() {
                             <CardBody className="px-6 py-1">
                                 <div className="px-1">
                                     <div className="items-center py-3">
-                                    <p className="text-gray-300 py-2 text-sm">If you believe your intellectual property rights are infringed, contact us at @gmail.com with a DMCA-compliant notice.</p>
+                                    <p className="text-gray-300 py-2 text-sm">If you believe your intellectual property rights are infringed, contact us at contact@sharelock.qzz.io with a DMCA-compliant notice.</p>
                                     </div>
                                 </div>
                             </CardBody>
@@ -404,10 +404,10 @@ export default function Terms() {
                             <CardBody className="px-6 py-1">
                                 <div className="px-1">
                                     <div className="items-center py-3">
-                                    <p className="text-gray-300 py-2 text-sm">These Terms, together with our Privacy PoFor questions about these Terms, contact us:</p>
+                                    <p className="text-gray-300 py-2 text-sm">These Terms, together with our Privacy Policy. For questions about these Terms, contact us:</p>
                                     </div>
                                     <div className="items-center py-1">
-                                    <p className="text-gray-300 py-2 text-sm">Email: @gmail.com</p>
+                                    <p className="text-gray-300 py-2 text-sm">Email: contact@sharelock.qzz.io</p>
                                     </div>
                                 </div>
                             </CardBody>
