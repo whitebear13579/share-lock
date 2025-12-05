@@ -1,5 +1,5 @@
 import { Input, InputProps } from "@heroui/input";
-import { forwardRef, useState, useEffect } from "react";
+import { forwardRef, useState } from "react";
 
 interface CustomInputProps extends Omit<InputProps, "variant"> {
     variant?: "blur";
@@ -23,18 +23,13 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
         },
         ref
     ) => {
-        const [internalValue, setInternalValue] = useState(
-            value || defaultValue || ""
-        );
+        const isControlled = value !== undefined;
+        const [internalValue, setInternalValue] = useState(defaultValue || "");
         const [isFocused, setIsFocused] = useState(false);
 
-        useEffect(() => {
-            if (value !== undefined) {
-                setInternalValue(value);
-            }
-        }, [value]);
+        const currentValue = isControlled ? value : internalValue;
+        const hasValue = currentValue !== "";
 
-        const hasValue = internalValue !== "";
         const shouldShowSmallLabel = hasValue || isFocused;
         const variantClasses = {
             blur: {
@@ -109,7 +104,10 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
                 isInvalid={isInvalid}
                 errorMessage={errorMessage}
                 onChange={(e) => {
-                    setInternalValue(e.target.value);
+                    // 只在非受控模式時更新內部 state
+                    if (!isControlled) {
+                        setInternalValue(e.target.value);
+                    }
                     onChange?.(e);
                 }}
                 onFocus={(e) => {
