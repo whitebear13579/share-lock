@@ -13,6 +13,9 @@ export interface User {
     storageQuotaLimit: number; // bytes, maximum 1GB
     createdAt: Timestamp;
     lastLoginAt?: Timestamp;
+    // Cumulative statistics (never decrease)
+    totalFilesShared?: number; // Total files shared since account creation
+    totalFilesReceived?: number; // Total files received since account creation
 }
 
 // files metadata
