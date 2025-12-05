@@ -15,6 +15,7 @@ import {
     getDoc,
     Timestamp,
     writeBatch,
+    increment,
 } from "firebase/firestore";
 import {
     CustomModal,
@@ -64,6 +65,10 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: (shareId: string, shareUrl: string) => void;
+    existingFile?: {
+        fileId: string;
+        displayName: string;
+    };
 }
 
 const STORAGE_QUOTA_BYTES = 1024 * 1024 * 1024; // 1GB
@@ -91,7 +96,7 @@ const truncateString = (str: string, maxLength: number = 35): string => {
     return str.substring(0, frontChars) + ellipsis + str.substring(str.length - backChars);
 };
 
-export default function UploadFiles({ isOpen, onClose, onSuccess }: Props) {
+export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }: Props) {
     const { user } = useAuth();
     const [step, setStep] = useState<Step>(
         DEBUG_MODE.SHOW_UPLOADING ? "uploading" :
@@ -491,6 +496,12 @@ export default function UploadFiles({ isOpen, onClose, onSuccess }: Props) {
                 });
             }
 
+            // Update user's totalFilesShared counter (cumulative, never decreases)
+            const userRef = doc(db, "users", user.uid);
+            batch.set(userRef, {
+                totalFilesShared: increment(1),
+            }, { merge: true });
+
             await batch.commit();
 
             const url = `${window.location.origin}/share/${shareId}`;
@@ -643,6 +654,29 @@ export default function UploadFiles({ isOpen, onClose, onSuccess }: Props) {
             );
         }
     }, [files.length, step]);
+
+    // Handle existing file mode - skip upload and go directly to settings
+    useEffect(() => {
+        if (isOpen && existingFile) {
+            setUploadedFileId(existingFile.fileId);
+            setShareSettings(prev => ({
+                ...prev,
+                displayName: existingFile.displayName,
+            }));
+            setStep("settings");
+        }
+    }, [isOpen, existingFile]);
+
+    // Reset state when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            // Small delay to allow close animation
+            const timer = setTimeout(() => {
+                resetState();
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
 
     // Animate drop zone when it appears
     useEffect(() => {
