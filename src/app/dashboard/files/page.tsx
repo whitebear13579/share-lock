@@ -44,7 +44,6 @@ import {
     Link2,
     RotateCwIcon,
     ClockFading,
-    Dot,
 } from "lucide-react";
 import {
     Spinner,
