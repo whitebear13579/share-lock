@@ -34,9 +34,6 @@ export default function Dashboard() {
     const { user, loading, logout } = useAuth();
 
     const handleLogout = async () => {
-        console.log("[Dashboard] ==> 開始登出動畫");
-        console.log("[Dashboard] fakeMainRef:", fakeMainRef.current);
-        console.log("[Dashboard] fakeFooterRef:", fakeFooterRef.current);
 
         return new Promise<void>((resolve) => {
             const tl = gsap.timeline({
@@ -202,7 +199,7 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55%">
+        <div className="min-h-screen bg-linear-205 from-slate-700 to-neutral-800 to-55%">
             {/* wide device naviBar */}
             {!isMobile && (
                 <DashboardNavigation loading={loading} onLogout={handleLogout} />
