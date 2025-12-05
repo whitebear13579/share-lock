@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { gsap } from "gsap";
 import { useAuth } from "@/utils/authProvider";
 import { Button } from "@heroui/button";
-import { Cog, Folder, House, LogOut, Star, FileText, ArrowRight, Share2, Check, Lock, X, ClockFading, LockOpen, ExternalLink, BellRing, Trash, ArrowUpRight, ChartPie, MessageCircleQuestionMark } from "lucide-react";
+import { Cog, Folder, House, LogOut, Star, FileText, ArrowRight, Share2, Check, Lock, X, ClockFading, LockOpen, ExternalLink, BellRing, Trash, ArrowUpRight, ChartPie, MessageCircleQuestionMark, Download, AlertCircle, File, Music, Video, Archive, Code, Image as ImageIcon, FileSpreadsheet, Presentation } from "lucide-react";
 import { Chip, Progress, Spinner, Navbar, NavbarBrand, NavbarContent, NavbarMenuToggle, NavbarMenu, NavbarMenuItem, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Avatar, Link } from "@heroui/react";
 import { Image } from "@heroui/react";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
@@ -12,9 +12,11 @@ import { Divider } from "@heroui/react";
 import { IoAlertOutline } from "react-icons/io5";
 import DashboardNavigation from "@/components/dashboardNavigation";
 import DashboardContentTransition from "@/components/dashboardContentTransition";
+import { CustomDrawer, CustomDrawerContent, CustomDrawerHeader, CustomDrawerBody, CustomDrawerFooter } from "@/components/drawer";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
-import { getUserStorageUsage, getStorageStatusColor } from "@/utils/storageQuota";
+import { getUserStorageUsage, getStorageStatusColor, formatBytes } from "@/utils/storageQuota";
+import { auth } from "@/utils/firebase";
 
 export default function Dashboard() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -31,7 +33,299 @@ export default function Dashboard() {
     });
     const [isLoadingStorage, setIsLoadingStorage] = useState(true);
 
+    // Share invitations state
+    const [shareInvitations, setShareInvitations] = useState<Array<{
+        id: string;
+        type: string;
+        shareId: string;
+        fileId: string;
+        createdAt: string | null;
+        delivered: boolean;
+        senderInfo?: {
+            displayName: string;
+            photoURL: string | null;
+            email: string | null;
+        };
+        fileInfo?: {
+            id: string;
+            displayName: string;
+            size: number;
+            contentType: string;
+            expiresAt: string | null;
+            shareMode: string;
+        };
+    }>>([]);
+    const [isLoadingInvitations, setIsLoadingInvitations] = useState(true);
+    const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
+    const [respondingInvitationId, setRespondingInvitationId] = useState<string | null>(null);
+
+    // Notifications state
+    const [notifications, setNotifications] = useState<Array<{
+        id: string;
+        type: string;
+        message?: string;
+        shareId?: string;
+        fileId?: string;
+        createdAt: string | null;
+        delivered: boolean;
+        deliveredAt?: string | null;
+        senderInfo?: {
+            displayName: string;
+            photoURL: string | null;
+            email: string | null;
+        };
+        fileInfo?: {
+            id: string;
+            displayName: string;
+            size: number;
+            contentType: string;
+            expiresAt: string | null;
+            shareMode: string;
+        };
+    }>>([]);
+    const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
+    const [isNotificationsDrawerOpen, setIsNotificationsDrawerOpen] = useState(false);
+    const [deletingNotificationId, setDeletingNotificationId] = useState<string | null>(null);
+
+    // Recent files state
+    const [recentFiles, setRecentFiles] = useState<Array<{
+        id: string;
+        name: string;
+        size: number;
+        contentType: string;
+        lastAccessedAt: string | null;
+        accessType: string;
+    }>>([]);
+    const [isLoadingRecentFiles, setIsLoadingRecentFiles] = useState(true);
+
     const { user, loading, logout } = useAuth();
+
+    // Fetch share invitations
+    const fetchShareInvitations = async () => {
+        if (!user) return;
+
+        setIsLoadingInvitations(true);
+        try {
+            const idToken = await auth.currentUser?.getIdToken();
+            const response = await fetch("/api/notifications/list", {
+                headers: {
+                    "Authorization": `Bearer ${idToken}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // Filter only share-invite type notifications that haven't been delivered
+                const invitations = data.notifications?.filter(
+                    (n: { type: string; delivered: boolean }) => n.type === "share-invite" && !n.delivered
+                ) || [];
+                setShareInvitations(invitations);
+            }
+        } catch (error) {
+            console.error("Error fetching share invitations:", error);
+        } finally {
+            setIsLoadingInvitations(false);
+        }
+    };
+
+    // Fetch all notifications
+    const fetchNotifications = async () => {
+        if (!user) return;
+
+        setIsLoadingNotifications(true);
+        try {
+            const idToken = await auth.currentUser?.getIdToken();
+            const response = await fetch("/api/notifications/list", {
+                headers: {
+                    "Authorization": `Bearer ${idToken}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setNotifications(data.notifications || []);
+            }
+        } catch (error) {
+            console.error("Error fetching notifications:", error);
+        } finally {
+            setIsLoadingNotifications(false);
+        }
+    };
+
+    // Fetch recent files
+    const fetchRecentFiles = async () => {
+        if (!user) return;
+
+        setIsLoadingRecentFiles(true);
+        try {
+            const idToken = await auth.currentUser?.getIdToken();
+            const response = await fetch("/api/files/recent", {
+                headers: {
+                    "Authorization": `Bearer ${idToken}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setRecentFiles(data.files || []);
+            }
+        } catch (error) {
+            console.error("Error fetching recent files:", error);
+        } finally {
+            setIsLoadingRecentFiles(false);
+        }
+    };
+
+    // Respond to share invitation
+    const respondToInvitation = async (notificationId: string, shareId: string, action: "accept" | "reject") => {
+        if (!user) return;
+
+        setRespondingInvitationId(notificationId);
+        try {
+            const idToken = await auth.currentUser?.getIdToken();
+            const response = await fetch("/api/notifications/respond", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${idToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ notificationId, shareId, action }),
+            });
+
+            if (response.ok) {
+                // Refresh invitations
+                await fetchShareInvitations();
+            }
+        } catch (error) {
+            console.error("Error responding to invitation:", error);
+        } finally {
+            setRespondingInvitationId(null);
+        }
+    };
+
+    // Delete notification
+    const deleteNotification = async (notificationId: string) => {
+        if (!user) return;
+
+        setDeletingNotificationId(notificationId);
+        try {
+            const idToken = await auth.currentUser?.getIdToken();
+            const response = await fetch(`/api/notifications/delete?notificationId=${notificationId}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${idToken}`,
+                },
+            });
+
+            if (response.ok) {
+                // Refresh notifications
+                await fetchNotifications();
+            }
+        } catch (error) {
+            console.error("Error deleting notification:", error);
+        } finally {
+            setDeletingNotificationId(null);
+        }
+    };
+
+    // Get file icon based on content type
+    const getFileIcon = (contentType?: string) => {
+        if (!contentType) return <File className="text-blue-400" size={20} />;
+
+        if (contentType.startsWith("image/")) return <ImageIcon className="text-pink-400" size={20} />;
+        if (contentType.startsWith("video/")) return <Video className="text-purple-400" size={20} />;
+        if (contentType.startsWith("audio/")) return <Music className="text-green-400" size={20} />;
+        if (contentType.includes("zip") || contentType.includes("rar") || contentType.includes("tar") ||
+            contentType.includes("7z") || contentType.includes("archive") || contentType.includes("compressed"))
+            return <Archive className="text-yellow-400" size={20} />;
+        if (contentType.includes("javascript") || contentType.includes("typescript") ||
+            contentType.includes("python") || contentType.includes("java") ||
+            contentType.includes("html") || contentType.includes("css") ||
+            contentType.includes("json") || contentType.includes("xml") || contentType.includes("text/x-"))
+            return <Code className="text-cyan-400" size={20} />;
+        if (contentType.includes("spreadsheet") || contentType.includes("excel") || contentType.includes("csv"))
+            return <FileSpreadsheet className="text-emerald-400" size={20} />;
+        if (contentType.includes("presentation") || contentType.includes("powerpoint"))
+            return <Presentation className="text-orange-400" size={20} />;
+        if (contentType.includes("pdf") || contentType.includes("document") ||
+            contentType.includes("word") || contentType.includes("text/plain"))
+            return <FileText className="text-red-400" size={20} />;
+
+        return <File className="text-blue-400" size={20} />;
+    };
+
+    // Get file icon background color
+    const getFileIconBgColor = (contentType?: string): string => {
+        if (!contentType) return "bg-blue-500/20";
+
+        if (contentType.startsWith("image/")) return "bg-pink-500/20";
+        if (contentType.startsWith("video/")) return "bg-purple-500/20";
+        if (contentType.startsWith("audio/")) return "bg-green-500/20";
+        if (contentType.includes("zip") || contentType.includes("rar") || contentType.includes("tar") ||
+            contentType.includes("7z") || contentType.includes("archive") || contentType.includes("compressed"))
+            return "bg-yellow-500/20";
+        if (contentType.includes("javascript") || contentType.includes("typescript") ||
+            contentType.includes("python") || contentType.includes("java") ||
+            contentType.includes("html") || contentType.includes("css") ||
+            contentType.includes("json") || contentType.includes("xml") || contentType.includes("text/x-"))
+            return "bg-cyan-500/20";
+        if (contentType.includes("spreadsheet") || contentType.includes("excel") || contentType.includes("csv"))
+            return "bg-emerald-500/20";
+        if (contentType.includes("presentation") || contentType.includes("powerpoint"))
+            return "bg-orange-500/20";
+        if (contentType.includes("pdf") || contentType.includes("document") ||
+            contentType.includes("word") || contentType.includes("text/plain"))
+            return "bg-red-500/20";
+
+        return "bg-blue-500/20";
+    };
+
+    // Get notification icon based on type
+    const getNotificationIcon = (type: string) => {
+        switch (type) {
+            case "share-invite":
+                return <Share2 className="text-blue-400" />;
+            case "download-complete":
+                return <Download className="text-green-400" />;
+            case "share-expired":
+                return <ClockFading className="text-orange-400" />;
+            default:
+                return <AlertCircle className="text-gray-400" />;
+        }
+    };
+
+    // Get notification icon bg color
+    const getNotificationIconBg = (type: string): string => {
+        switch (type) {
+            case "share-invite":
+                return "bg-blue-500/25";
+            case "download-complete":
+                return "bg-emerald-500/25";
+            case "share-expired":
+                return "bg-orange-500/25";
+            default:
+                return "bg-gray-500/25";
+        }
+    };
+
+    // Format relative time
+    const formatRelativeTime = (dateString: string | null): string => {
+        if (!dateString) return "未知時間";
+
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return "剛剛";
+        if (diffMins < 60) return `${diffMins} 分鐘前`;
+        if (diffHours < 24) return `${diffHours} 小時前`;
+        if (diffDays < 7) return `${diffDays} 天前`;
+
+        return date.toLocaleDateString("zh-TW");
+    };
 
     const handleLogout = async () => {
 
@@ -164,6 +458,16 @@ export default function Dashboard() {
         };
 
         fetchStorageUsage();
+    }, [user]);
+
+    // Fetch all data when user is available
+    useEffect(() => {
+        if (user) {
+            fetchShareInvitations();
+            fetchNotifications();
+            fetchRecentFiles();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
     const welcomeString = ["🌅 早安，歡迎回來！", "☀️ 午安，歡迎回來！", "🌇 晚安，近來好嗎？", "🌙 夜深了，好好休息吧！"]
 
@@ -388,80 +692,92 @@ export default function Dashboard() {
                                             <h4 className="font-bold text-xl text-white">檔案分享</h4>
                                             <p className="text-gray-300 text-sm">咚咚咚，看看有沒有人要分享檔案給你？</p>
                                         </div>
-                                        <Button className="custom-button-trans-override ml-auto bg-white/10 border border-white/30 text-gray-200 shadow-2xl font-medium text-sm" radius="lg" startContent={<ExternalLink size={18} />} >
+                                        <Button
+                                            className="custom-button-trans-override ml-auto bg-white/10 border border-white/30 text-gray-200 shadow-2xl font-medium text-sm"
+                                            radius="lg"
+                                            startContent={<ExternalLink size={18} />}
+                                            onPress={() => setIsShareDrawerOpen(true)}
+                                            isDisabled={shareInvitations.length === 0}
+                                        >
                                             查看更多
                                         </Button>
                                     </CardHeader>
                                     <CardBody className="px-6 py-4">
                                         <div className="px-4">
-                                            <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 gap-y-3">
-                                                <Avatar src="https://i.pravatar.cc/40?u=user1" size="md" />
-                                                <div className="flex min-w-0 flex-col">
-                                                    <p className="text-white text-base font-medium truncate">Anna 想要分享 &ldquo;線性代數考古題&rdquo; 給你</p>
-                                                    <p className="text-sm font-normal flex gap-2 items-center text-gray-400">
-                                                        <IoAlertOutline size={16} className="rounded-full bg-amber-500 p-0.5 text-zinc-900" />即將失效： 2025 / 08 / 31
-                                                    </p>
+                                            {isLoadingInvitations ? (
+                                                <div className="flex items-center justify-center py-4">
+                                                    <Spinner size="md" color="default" variant="dots" />
                                                 </div>
-                                                <div className="justify-self-center self-center">
-                                                    <Chip startContent={<Lock size={14} className="text-white" />} className="pl-3 items-center text-sm text-white h-8 bg-blue-600">
-                                                        已開啟裝置綁定
-                                                    </Chip>
+                                            ) : shareInvitations.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                                                    <p className="text-base">沒有分享邀請</p>
                                                 </div>
-                                                <div className="flex items-center justify-end gap-2 self-center">
-                                                    <Button
-                                                        size="sm"
-                                                        radius="full"
-                                                        isIconOnly
-                                                        aria-label="接受"
-                                                        className="custom-button-trans-override bg-emerald-600 text-white h-8 w-8 p-0"
-                                                    >
-                                                        <Check size={20} />
-                                                    </Button>
-                                                    <span className="text-sm text-white font-extrabold">/</span>
-                                                    <Button
-                                                        size="sm"
-                                                        radius="full"
-                                                        isIconOnly
-                                                        aria-label="拒絕"
-                                                        className="custom-button-trans-override bg-rose-500 text-white h-8 w-8 p-0"
-                                                    >
-                                                        <X size={20} />
-                                                    </Button>
+                                            ) : (
+                                                <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 gap-y-3">
+                                                    {shareInvitations.slice(0, 2).map((invitation) => (
+                                                        <React.Fragment key={invitation.id}>
+                                                            <Avatar
+                                                                src={invitation.senderInfo?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(invitation.senderInfo?.displayName || "User")}&background=random`}
+                                                                size="md"
+                                                            />
+                                                            <div className="flex min-w-0 flex-col">
+                                                                <p className="text-white text-base font-medium truncate">
+                                                                    {invitation.senderInfo?.displayName || "某人"} 想要分享 &ldquo;{invitation.fileInfo?.displayName || "檔案"}&rdquo; 給你
+                                                                </p>
+                                                                <p className="text-sm font-normal flex gap-2 items-center text-gray-400">
+                                                                    {invitation.fileInfo?.expiresAt && new Date(invitation.fileInfo.expiresAt) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) ? (
+                                                                        <>
+                                                                            <IoAlertOutline size={16} className="rounded-full bg-amber-500 p-0.5 text-zinc-900" />
+                                                                            即將失效： {new Date(invitation.fileInfo.expiresAt).toLocaleDateString("zh-TW")}
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <Check size={16} className="rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
+                                                                            {invitation.fileInfo?.expiresAt ? new Date(invitation.fileInfo.expiresAt).toLocaleDateString("zh-TW") : "未知"} 前有效
+                                                                        </>
+                                                                    )}
+                                                                </p>
+                                                            </div>
+                                                            <div className="justify-self-center self-center">
+                                                                {invitation.fileInfo?.shareMode === "device" ? (
+                                                                    <Chip startContent={<Lock size={14} className="text-white" />} className="pl-3 items-center text-sm text-white h-8 bg-blue-600">
+                                                                        已開啟裝置綁定
+                                                                    </Chip>
+                                                                ) : (
+                                                                    <Chip startContent={<LockOpen size={14} className="text-white" />} className="pl-3 items-center text-sm text-white h-8 bg-emerald-600">
+                                                                        未限制
+                                                                    </Chip>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center justify-end gap-2 self-center">
+                                                                <Button
+                                                                    size="sm"
+                                                                    radius="full"
+                                                                    isIconOnly
+                                                                    aria-label="接受"
+                                                                    className="custom-button-trans-override bg-emerald-600 text-white h-8 w-8 p-0"
+                                                                    isLoading={respondingInvitationId === invitation.id}
+                                                                    onPress={() => respondToInvitation(invitation.id, invitation.shareId, "accept")}
+                                                                >
+                                                                    {respondingInvitationId !== invitation.id && <Check size={20} />}
+                                                                </Button>
+                                                                <span className="text-sm text-white font-extrabold">/</span>
+                                                                <Button
+                                                                    size="sm"
+                                                                    radius="full"
+                                                                    isIconOnly
+                                                                    aria-label="拒絕"
+                                                                    className="custom-button-trans-override bg-rose-500 text-white h-8 w-8 p-0"
+                                                                    isLoading={respondingInvitationId === invitation.id}
+                                                                    onPress={() => respondToInvitation(invitation.id, invitation.shareId, "reject")}
+                                                                >
+                                                                    {respondingInvitationId !== invitation.id && <X size={20} />}
+                                                                </Button>
+                                                            </div>
+                                                        </React.Fragment>
+                                                    ))}
                                                 </div>
-                                                <Avatar src="https://i.pravatar.cc/40?u=user2" size="md" />
-                                                <div className="flex min-w-0 flex-col">
-                                                    <p className="text-white text-base font-medium truncate">Wendy 想要分享 &ldquo;計算機&nbsp;...&nbsp;考解答.pdf&rdquo; 給你</p>
-                                                    <p className="text-sm font-normal flex gap-2 items-center text-gray-400">
-                                                        <Check size={16} className="rounded-full bg-emerald-500 p-0.5 text-zinc-900" /> 2026 / 09 / 27 前有效
-                                                    </p>
-                                                </div>
-                                                <div className="justify-self-center self-center">
-                                                    <Chip startContent={<LockOpen size={14} className="text-white" />} className="pl-3 items-center text-sm text-white h-8 bg-emerald-600">
-                                                        未限制
-                                                    </Chip>
-                                                </div>
-                                                <div className="flex items-center justify-end gap-2 self-center">
-                                                    <Button
-                                                        size="sm"
-                                                        radius="full"
-                                                        isIconOnly
-                                                        aria-label="接受"
-                                                        className="custom-button-trans-override bg-emerald-600 text-white h-8 w-8 p-0"
-                                                    >
-                                                        <Check size={20} />
-                                                    </Button>
-                                                    <span className="text-sm text-white font-extrabold">/</span>
-                                                    <Button
-                                                        size="sm"
-                                                        radius="full"
-                                                        isIconOnly
-                                                        aria-label="拒絕"
-                                                        className="custom-button-trans-override bg-rose-500 text-white h-8 w-8 p-0"
-                                                    >
-                                                        <X size={20} />
-                                                    </Button>
-                                                </div>
-                                            </div>
+                                            )}
                                         </div>
                                     </CardBody>
                                 </Card>
@@ -540,76 +856,54 @@ export default function Dashboard() {
                                                 <p className="text-gray-300 text-sm">負責掌管你的重要訊息</p>
                                             </div>
                                         </div>
-                                        <Button className="custom-button-trans-override ml-auto bg-white/10 border border-white/30 text-gray-200 shadow-2xl font-medium text-sm" radius="lg" startContent={<ExternalLink size={18} />} >
+                                        <Button
+                                            className="custom-button-trans-override ml-auto bg-white/10 border border-white/30 text-gray-200 shadow-2xl font-medium text-sm"
+                                            radius="lg"
+                                            startContent={<ExternalLink size={18} />}
+                                            onPress={() => setIsNotificationsDrawerOpen(true)}
+                                            isDisabled={notifications.length === 0}
+                                        >
                                             查看全部
                                         </Button>
                                     </CardHeader>
                                     <CardBody className="px-6 py-4">
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3">
-                                                <div className="rounded-xl bg-orange-500/25 text-orange-400 p-0 h-10 w-10 flex items-center justify-center">
-                                                    <ClockFading />
-                                                </div>
-                                                <div>
-                                                    <p className="text-base text-gray-200 font-medium">檔案即將過期</p>
-                                                    <p className="text-xs text-gray-400">2 小時前</p>
-                                                </div>
-                                                <Divider orientation="vertical" className="bg-white/40 h-9 w-0.5 rounded-full mx-2" />
-                                                <div className="text-gray-300 text-sm">
-                                                    檔案 &ldquo;在學證明.pdf&rdquo; 即將過期。
-                                                </div>
-                                                <Button
-                                                    size="sm"
-                                                    isIconOnly
-                                                    radius="full"
-                                                    className="custom-button-trans-override flex items-center justify-center bg-zinc-400/40 shadow-xl group"
-                                                >
-                                                    <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
-                                                </Button>
+                                        {isLoadingNotifications ? (
+                                            <div className="flex items-center justify-center py-8">
+                                                <Spinner size="md" color="default" variant="dots" />
                                             </div>
-                                            <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3">
-                                                <div className="rounded-xl bg-red-500/25 text-red-400 p-0 h-10 w-10 flex items-center justify-center">
-                                                    <X />
-                                                </div>
-                                                <div>
-                                                    <p className="text-base text-gray-200 font-medium">Harry 婉拒了你的檔案</p>
-                                                    <p className="text-xs text-gray-400">5 小時前</p>
-                                                </div>
-                                                <Divider orientation="vertical" className="bg-white/40 h-9 w-0.5 rounded-full mx-2" />
-                                                <div className="text-gray-300 text-sm">
-                                                    Harry 婉拒了 &ldquo;期末簡報.pptx&rdquo;
-                                                </div>
-                                                <Button
-                                                    size="sm"
-                                                    isIconOnly
-                                                    radius="full"
-                                                    className="custom-button-trans-override flex items-center justify-center bg-zinc-400/40 shadow-xl group"
-                                                >
-                                                    <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
-                                                </Button>
+                                        ) : notifications.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+                                                <p className="text-base">沒有通知</p>
                                             </div>
-                                            <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3">
-                                                <div className="rounded-xl bg-emerald-500/25 text-emerald-400 p-0 h-10 w-10 flex items-center justify-center">
-                                                    <Check />
-                                                </div>
-                                                <div>
-                                                    <p className="text-base text-gray-200 font-medium">Miya 收到了的檔案</p>
-                                                    <p className="text-xs text-gray-400">2025 / 07 / 31</p>
-                                                </div>
-                                                <Divider orientation="vertical" className="bg-white/40 h-9 w-0.5 rounded-full  mx-2" />
-                                                <div className="text-gray-300 text-sm">
-                                                    Miya 收到了 &ldquo;ヨルシカ 盗作.flac&rdquo;
-                                                </div>
-                                                <Button
-                                                    size="sm"
-                                                    isIconOnly
-                                                    radius="full"
-                                                    className="custom-button-trans-override flex items-center justify-center bg-zinc-400/40 shadow-xl group"
-                                                >
-                                                    <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
-                                                </Button>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {notifications.slice(0, 3).map((notif) => (
+                                                    <div key={notif.id} className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3 transition-all duration-200 hover:bg-white/15">
+                                                        <div className={`rounded-xl ${getNotificationIconBg(notif.type)} p-2 h-10 w-10 flex items-center justify-center flex-shrink-0`}>
+                                                            {getNotificationIcon(notif.type)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-base text-gray-200 font-medium">{notif.type === "share-invite" ? "分享邀請" : notif.type === "download-complete" ? "下載完成" : notif.type === "share-expired" ? "分享過期" : "通知"}</p>
+                                                            <p className="text-xs text-gray-400">{formatRelativeTime(notif.createdAt)}</p>
+                                                        </div>
+                                                        <Divider orientation="vertical" className="bg-white/40 h-9 w-0.5 rounded-full mx-2" />
+                                                        <div className="text-gray-300 text-sm truncate">
+                                                            {notif.message || `檔案 "${notif.fileInfo?.displayName || "未知"}" 的通知`}
+                                                        </div>
+                                                        <Button
+                                                            size="sm"
+                                                            isIconOnly
+                                                            radius="full"
+                                                            className="custom-button-trans-override flex items-center justify-center bg-zinc-400/40 shadow-xl group"
+                                                            isLoading={deletingNotificationId === notif.id}
+                                                            onPress={() => deleteNotification(notif.id)}
+                                                        >
+                                                            {deletingNotificationId !== notif.id && <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />}
+                                                        </Button>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        </div>
+                                        )}
                                     </CardBody>
                                 </Card>
 
@@ -626,53 +920,47 @@ export default function Dashboard() {
                                         </div>
                                     </CardHeader>
                                     <CardBody className="px-6 py-4 flex-1 overflow-auto">
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3 hover:bg-white/15 transition-all duration-200 cursor-pointer">
-                                                <div className="bg-red-500/20 p-2 rounded-lg">
-                                                    <FileText size={20} className="text-red-400" />
-                                                </div>
-                                                <div className="flex min-w-0 flex-col">
-                                                    <p className="text-white text-base font-medium truncate">線性代數考古題.pdf</p>
-                                                    <p className="text-xs text-gray-400">上次使用是在 2025/08/31 15:42</p>
-                                                </div>
-                                                <div className="justify-self-center">
-                                                    <Chip className="text-xs text-gray-300 bg-gray-700/50">
-                                                        2.4 MB
-                                                    </Chip>
-                                                </div>
-                                                <ArrowUpRight size={18} className="text-gray-400" />
+                                        {isLoadingRecentFiles ? (
+                                            <div className="flex items-center justify-center py-8">
+                                                <Spinner size="md" color="default" variant="dots" />
                                             </div>
-                                            <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3 hover:bg-white/15 transition-all duration-200 cursor-pointer">
-                                                <div className="bg-green-500/20 p-2 rounded-lg">
-                                                    <FileText size={20} className="text-green-400" />
-                                                </div>
-                                                <div className="flex min-w-0 flex-col">
-                                                    <p className="text-white text-base font-medium truncate">計算機概論小考解答.pdf</p>
-                                                    <p className="text-xs text-gray-400">上次使用是在 2025/08/29 09:15</p>
-                                                </div>
-                                                <div className="justify-self-center">
-                                                    <Chip className="text-xs text-gray-300 bg-gray-700/50">
-                                                        1.8 MB
-                                                    </Chip>
-                                                </div>
-                                                <ArrowUpRight size={18} className="text-gray-400" />
+                                        ) : recentFiles.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+                                                <p className="text-base">沒有最近使用的檔案</p>
                                             </div>
-                                            <div className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3 hover:bg-white/15 transition-all duration-200 cursor-pointer">
-                                                <div className="bg-purple-500/20 p-2 rounded-lg">
-                                                    <FileText size={20} className="text-purple-400" />
-                                                </div>
-                                                <div className="flex min-w-0 flex-col">
-                                                    <p className="text-white text-base font-medium truncate">期末簡報.pptx</p>
-                                                    <p className="text-xs text-gray-400">上次使用是在 2025/08/28 20:30</p>
-                                                </div>
-                                                <div className="justify-self-center">
-                                                    <Chip className="text-xs text-gray-300 bg-gray-700/50">
-                                                        15.2 MB
-                                                    </Chip>
-                                                </div>
-                                                <ArrowUpRight size={18} className="text-gray-400" />
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {recentFiles.slice(0, 3).map((file) => (
+                                                    <div
+                                                        key={file.id}
+                                                        className="grid grid-cols-[auto_4fr_2fr_auto] items-center gap-x-3 bg-white/10 rounded-2xl shadow-xl px-4 py-3 hover:bg-white/15 transition-all duration-200 cursor-pointer"
+                                                        onClick={() => router.push(`/dashboard/files?fileId=${file.id}`)}
+                                                    >
+                                                        <div className={`${getFileIconBgColor(file.contentType)} p-2 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                                                            {getFileIcon(file.contentType)}
+                                                        </div>
+                                                        <div className="flex min-w-0 flex-col">
+                                                            <p className="text-white text-base font-medium truncate">{file.name}</p>
+                                                            <p className="text-xs text-gray-400">
+                                                                上次使用是在 {file.lastAccessedAt ? new Date(file.lastAccessedAt).toLocaleString("zh-TW", {
+                                                                    year: "numeric",
+                                                                    month: "2-digit",
+                                                                    day: "2-digit",
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit"
+                                                                }) : "未知"}
+                                                            </p>
+                                                        </div>
+                                                        <div className="justify-self-center">
+                                                            <Chip className="text-xs text-gray-300 bg-gray-700/50">
+                                                                {formatBytes(file.size)}
+                                                            </Chip>
+                                                        </div>
+                                                        <ArrowUpRight size={18} className="text-gray-400" />
+                                                    </div>
+                                                ))}
                                             </div>
-                                        </div>
+                                        )}
                                     </CardBody>
                                 </Card>
                             </div>
@@ -691,49 +979,79 @@ export default function Dashboard() {
                                         <h4 className="font-bold text-base text-white">檔案分享</h4>
                                         <p className="text-gray-300 text-xs">看看有沒有人要分享檔案給你？</p>
                                     </div>
-                                    <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
+                                    <Button
+                                        className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs"
+                                        size="sm"
+                                        radius="md"
+                                        startContent={<ExternalLink size={14} />}
+                                        onPress={() => setIsShareDrawerOpen(true)}
+                                        isDisabled={shareInvitations.length === 0}
+                                    >
                                         查看更多
                                     </Button>
                                 </CardHeader>
                                 <CardBody className="px-4 py-3">
-                                    <div className="space-y-3">
-                                        <div className="grid grid-cols-[auto_3fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2">
-                                            <Avatar src="https://i.pravatar.cc/40?u=user1" size="sm" />
-                                            <div className="flex min-w-0 flex-col">
-                                                <p className="text-white text-sm font-medium truncate">Anna 想分享 &quot;線性代數考古題&quot;</p>
-                                                <p className="text-xs text-gray-400 flex gap-1 items-center">
-                                                    <IoAlertOutline size={12} className="rounded-full bg-amber-500 p-0.5 text-zinc-900" />
-                                                    即將失效：2025 / 08 / 31
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-emerald-600 text-white h-8 w-8 p-0">
-                                                    <Check size={16} />
-                                                </Button>
-                                                <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-rose-500 text-white h-8 w-8">
-                                                    <X size={16} />
-                                                </Button>
-                                            </div>
+                                    {isLoadingInvitations ? (
+                                        <div className="flex items-center justify-center py-4">
+                                            <Spinner size="sm" color="default" variant="dots" />
                                         </div>
-                                        <div className="grid grid-cols-[auto_3fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2">
-                                            <Avatar src="https://i.pravatar.cc/40?u=user2" size="sm" />
-                                            <div className="flex min-w-0 flex-col">
-                                                <p className="text-white text-sm font-medium truncate">Wendy 想分享 &quot;計...答.pdf&quot;</p>
-                                                <p className="text-xs text-gray-400 flex gap-1 items-center">
-                                                    <Check size={12} className="rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
-                                                    2026 / 09 / 27 前有效
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-emerald-600 text-white h-8 w-8 p-0">
-                                                    <Check size={16} />
-                                                </Button>
-                                                <Button size="sm" radius="full" isIconOnly className="custom-button-trans-override bg-rose-500 text-white h-8 w-8 p-0">
-                                                    <X size={16} />
-                                                </Button>
-                                            </div>
+                                    ) : shareInvitations.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-4 text-gray-400">
+                                            <Share2 size={24} className="mb-1 opacity-50" />
+                                            <p className="text-xs">目前沒有分享邀請</p>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {shareInvitations.slice(0, 2).map((invitation) => (
+                                                <div key={invitation.id} className="grid grid-cols-[auto_3fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 transition-all duration-200">
+                                                    <Avatar
+                                                        src={invitation.senderInfo?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(invitation.senderInfo?.displayName || "User")}&background=random`}
+                                                        size="sm"
+                                                    />
+                                                    <div className="flex min-w-0 flex-col">
+                                                        <p className="text-white text-sm font-medium truncate">
+                                                            {invitation.senderInfo?.displayName || "某人"} 想分享 &quot;{invitation.fileInfo?.displayName || "檔案"}&quot;
+                                                        </p>
+                                                        <p className="text-xs text-gray-400 flex gap-1 items-center">
+                                                            {invitation.fileInfo?.expiresAt && new Date(invitation.fileInfo.expiresAt) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) ? (
+                                                                <>
+                                                                    <IoAlertOutline size={12} className="rounded-full bg-amber-500 p-0.5 text-zinc-900" />
+                                                                    即將失效：{new Date(invitation.fileInfo.expiresAt).toLocaleDateString("zh-TW")}
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Check size={12} className="rounded-full bg-emerald-500 p-0.5 text-zinc-900" />
+                                                                    {invitation.fileInfo?.expiresAt ? new Date(invitation.fileInfo.expiresAt).toLocaleDateString("zh-TW") : "未知"} 前有效
+                                                                </>
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Button
+                                                            size="sm"
+                                                            radius="full"
+                                                            isIconOnly
+                                                            className="custom-button-trans-override bg-emerald-600 text-white h-8 w-8 p-0"
+                                                            isLoading={respondingInvitationId === invitation.id}
+                                                            onPress={() => respondToInvitation(invitation.id, invitation.shareId, "accept")}
+                                                        >
+                                                            {respondingInvitationId !== invitation.id && <Check size={16} />}
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            radius="full"
+                                                            isIconOnly
+                                                            className="custom-button-trans-override bg-rose-500 text-white h-8 w-8"
+                                                            isLoading={respondingInvitationId === invitation.id}
+                                                            onPress={() => respondToInvitation(invitation.id, invitation.shareId, "reject")}
+                                                        >
+                                                            {respondingInvitationId !== invitation.id && <X size={16} />}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </CardBody>
                             </Card>
 
@@ -805,61 +1123,56 @@ export default function Dashboard() {
                                             <p className="text-gray-300 text-xs">負責掌管你的重要訊息</p>
                                         </div>
                                     </div>
-                                    <Button className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs" size="sm" radius="md" startContent={<ExternalLink size={14} />}>
+                                    <Button
+                                        className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200 shadow-xl font-medium text-xs"
+                                        size="sm"
+                                        radius="md"
+                                        startContent={<ExternalLink size={14} />}
+                                        onPress={() => setIsNotificationsDrawerOpen(true)}
+                                        isDisabled={notifications.length === 0}
+                                    >
                                         查看全部
                                     </Button>
                                 </CardHeader>
                                 <CardBody className="px-4 py-3">
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-2 bg-white/10 rounded-2xl shadow-xl px-3 py-2">
-                                            <div className="rounded-lg bg-orange-500/25 text-orange-400 p-1 h-8 w-8 flex items-center justify-center">
-                                                <ClockFading size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-200 font-medium">檔案即將過期</p>
-                                                <p className="text-xs text-gray-400">2 小時前</p>
-                                            </div>
-                                            <Divider orientation="vertical" className="bg-white/40 h-6 w-0.5 rounded-full mx-1" />
-                                            <div className="text-gray-300 text-xs">
-                                                檔案 &ldquo;在學證明.pdf&rdquo; 即將過期。
-                                            </div>
-                                            <Button size="sm" isIconOnly radius="full" className="custom-button-trans-override bg-zinc-400/40 shadow-xl h-8 w-8 p-0 group">
-                                                <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
-                                            </Button>
+                                    {isLoadingNotifications ? (
+                                        <div className="flex items-center justify-center py-4">
+                                            <Spinner size="sm" color="default" variant="dots" />
                                         </div>
-                                        <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-2 bg-white/10 rounded-2xl shadow-xl px-3 py-2">
-                                            <div className="rounded-lg bg-red-500/25 text-red-400 p-1 h-8 w-8 flex items-center justify-center">
-                                                <X size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-200 font-medium">Harry 已婉拒</p>
-                                                <p className="text-xs text-gray-400">5 小時前</p>
-                                            </div>
-                                            <Divider orientation="vertical" className="bg-white/40 h-6 w-0.5 rounded-full mx-1" />
-                                            <div className="text-gray-300 text-xs">
-                                                Harry 婉拒了 &ldquo;期末簡報.pptx&rdquo;
-                                            </div>
-                                            <Button size="sm" isIconOnly radius="full" className="custom-button-trans-override bg-zinc-400/40 shadow-xl h-8 w-8 p-0 group">
-                                                <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
-                                            </Button>
+                                    ) : notifications.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-4 text-gray-400">
+                                            <BellRing size={24} className="mb-1 opacity-50" />
+                                            <p className="text-xs">目前沒有通知</p>
                                         </div>
-                                        <div className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-2 bg-white/10 rounded-2xl shadow-xl px-3 py-2">
-                                            <div className="rounded-lg bg-emerald-500/25 text-emerald-400 p-1 h-8 w-8 flex items-center justify-center">
-                                                <Check size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-200 font-medium">Miya 已收到</p>
-                                                <p className="text-xs text-gray-400">2025 / 07 / 31</p>
-                                            </div>
-                                            <Divider orientation="vertical" className="bg-white/40 h-6 w-0.5 rounded-full mx-1" />
-                                            <div className="text-gray-300 text-xs">
-                                                Miya 收到了 &ldquo;ヨルシカ 盗作.flac&rdquo;
-                                            </div>
-                                            <Button size="sm" isIconOnly radius="full" className="custom-button-trans-override bg-zinc-400/40 shadow-xl h-8 w-8 p-0 group">
-                                                <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />
-                                            </Button>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {notifications.slice(0, 3).map((notif) => (
+                                                <div key={notif.id} className="grid grid-cols-[auto_3fr_auto_4fr_auto] items-center gap-x-2 bg-white/10 rounded-2xl shadow-xl px-3 py-2 transition-all duration-200">
+                                                    <div className={`rounded-lg ${getNotificationIconBg(notif.type)} p-1 h-8 w-8 flex items-center justify-center`}>
+                                                        {getNotificationIcon(notif.type)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-gray-200 font-medium">{notif.type === "share-invite" ? "分享邀請" : notif.type === "download-complete" ? "下載完成" : notif.type === "share-expired" ? "分享過期" : "通知"}</p>
+                                                        <p className="text-xs text-gray-400">{formatRelativeTime(notif.createdAt)}</p>
+                                                    </div>
+                                                    <Divider orientation="vertical" className="bg-white/40 h-6 w-0.5 rounded-full mx-1" />
+                                                    <div className="text-gray-300 text-xs truncate">
+                                                        {notif.message || `檔案 "${notif.fileInfo?.displayName || "未知"}" 的通知`}
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        isIconOnly
+                                                        radius="full"
+                                                        className="custom-button-trans-override bg-zinc-400/40 shadow-xl h-8 w-8 p-0 group"
+                                                        isLoading={deletingNotificationId === notif.id}
+                                                        onPress={() => deleteNotification(notif.id)}
+                                                    >
+                                                        {deletingNotificationId !== notif.id && <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />}
+                                                    </Button>
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
+                                    )}
                                 </CardBody>
                             </Card>
                             <Card className="bg-white/10 backdrop-blur-sm border-white/20" shadow="lg">
@@ -873,47 +1186,40 @@ export default function Dashboard() {
                                     </div>
                                 </CardHeader>
                                 <CardBody className="px-4 py-3">
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-[auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 hover:bg-white/15 transition-all cursor-pointer">
-                                            <div className="bg-red-500/20 p-1.5 rounded-lg">
-                                                <FileText size={16} className="text-red-400" />
-                                            </div>
-                                            <div className="flex min-w-0 flex-col">
-                                                <p className="text-white text-sm font-medium truncate">線性代數考古題.pdf</p>
-                                                <p className="text-xs text-gray-400">2025/08/31 15:42</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Chip className="text-xs text-gray-300 bg-gray-700/50 h-5 px-2">2.4MB</Chip>
-                                                <ArrowUpRight size={14} className="text-gray-400" />
-                                            </div>
+                                    {isLoadingRecentFiles ? (
+                                        <div className="flex items-center justify-center py-4">
+                                            <Spinner size="sm" color="default" variant="dots" />
                                         </div>
-                                        <div className="grid grid-cols-[auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 hover:bg-white/15 transition-all cursor-pointer">
-                                            <div className="bg-green-500/20 p-1.5 rounded-lg">
-                                                <FileText size={16} className="text-green-400" />
-                                            </div>
-                                            <div className="flex min-w-0 flex-col">
-                                                <p className="text-white text-sm font-medium truncate">計算機概論小考解答.pdf</p>
-                                                <p className="text-xs text-gray-400">2025/08/29 09:15</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Chip className="text-xs text-gray-300 bg-gray-700/50 h-5 px-2">1.8MB</Chip>
-                                                <ArrowUpRight size={14} className="text-gray-400" />
-                                            </div>
+                                    ) : recentFiles.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-4 text-gray-400">
+                                            <FileText size={24} className="mb-1 opacity-50" />
+                                            <p className="text-xs">目前沒有最近使用的檔案</p>
                                         </div>
-                                        <div className="grid grid-cols-[auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 hover:bg-white/15 transition-all cursor-pointer">
-                                            <div className="bg-purple-500/20 p-1.5 rounded-lg">
-                                                <FileText size={16} className="text-purple-400" />
-                                            </div>
-                                            <div className="flex min-w-0 flex-col">
-                                                <p className="text-white text-sm font-medium truncate">期末簡報.pptx</p>
-                                                <p className="text-xs text-gray-400">2025/08/28 20:30</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Chip className="text-xs text-gray-300 bg-gray-700/50 h-5 px-2">15.2MB</Chip>
-                                                <ArrowUpRight size={14} className="text-gray-400" />
-                                            </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {recentFiles.slice(0, 3).map((file) => (
+                                                <div
+                                                    key={file.id}
+                                                    className="grid grid-cols-[auto_4fr_auto] items-center gap-x-3 bg-white/10 rounded-xl px-3 py-2 hover:bg-white/15 transition-all cursor-pointer"
+                                                    onClick={() => router.push(`/dashboard/files?fileId=${file.id}`)}
+                                                >
+                                                    <div className={`${getFileIconBgColor(file.contentType)} p-1.5 rounded-lg`}>
+                                                        {getFileIcon(file.contentType)}
+                                                    </div>
+                                                    <div className="flex min-w-0 flex-col">
+                                                        <p className="text-white text-sm font-medium truncate">{file.name}</p>
+                                                        <p className="text-xs text-gray-400">
+                                                            {file.lastAccessedAt ? new Date(file.lastAccessedAt).toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" }) + " " + new Date(file.lastAccessedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }) : "未知"}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Chip className="text-xs text-gray-300 bg-gray-700/50 h-5 px-2">{formatBytes(file.size)}</Chip>
+                                                        <ArrowUpRight size={14} className="text-gray-400" />
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
+                                    )}
                                 </CardBody>
                             </Card>
                         </div>
@@ -944,6 +1250,223 @@ export default function Dashboard() {
                     &nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.
                 </p>
             </div>
+
+            {/* Share Invitations Drawer */}
+            <CustomDrawer
+                isOpen={isShareDrawerOpen}
+                onOpenChange={setIsShareDrawerOpen}
+                variant="blur"
+                size="lg"
+            >
+                <CustomDrawerContent>
+                    {(onClose) => (
+                        <>
+                            <CustomDrawerHeader>
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-blue-600/30 p-3 rounded-xl">
+                                        <Share2 size={24} className="text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold">檔案分享邀請</h3>
+                                        <p className="text-sm text-gray-300">管理所有待處理的分享邀請</p>
+                                    </div>
+                                </div>
+                            </CustomDrawerHeader>
+                            <CustomDrawerBody>
+                                {isLoadingInvitations ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <Spinner size="lg" color="default" variant="dots" />
+                                    </div>
+                                ) : shareInvitations.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                                        <Share2 size={48} className="mb-4 opacity-50" />
+                                        <p className="text-lg">目前沒有分享邀請</p>
+                                        <p className="text-sm mt-2">當有人分享檔案給你時，邀請會顯示在這裡</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {shareInvitations.map((invitation) => (
+                                            <div key={invitation.id} className="bg-white/10 rounded-2xl p-4 shadow-xl hover:bg-white/15 transition-all duration-200">
+                                                <div className="flex items-start gap-4">
+                                                    <Avatar
+                                                        src={invitation.senderInfo?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(invitation.senderInfo?.displayName || "User")}&background=random`}
+                                                        size="lg"
+                                                        className="flex-shrink-0"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-white text-lg font-semibold mb-1">
+                                                            {invitation.senderInfo?.displayName || "某人"}
+                                                        </p>
+                                                        <p className="text-gray-300 text-sm mb-2">
+                                                            {invitation.senderInfo?.email || "未知郵箱"}
+                                                        </p>
+                                                        <div className="flex items-center gap-2 mb-3">
+                                                            <div className={`${getFileIconBgColor(invitation.fileInfo?.contentType)} p-2 rounded-lg`}>
+                                                                {getFileIcon(invitation.fileInfo?.contentType)}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-white font-medium">{invitation.fileInfo?.displayName || "檔案"}</p>
+                                                                <p className="text-gray-400 text-xs">{formatBytes(invitation.fileInfo?.size || 0)}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3 mb-3">
+                                                            {invitation.fileInfo?.shareMode === "device" ? (
+                                                                <Chip startContent={<Lock size={14} className="text-white" />} className="pl-2 items-center text-xs text-white bg-blue-600">
+                                                                    已開啟裝置綁定
+                                                                </Chip>
+                                                            ) : (
+                                                                <Chip startContent={<LockOpen size={14} className="text-white" />} className="pl-2 items-center text-xs text-white bg-emerald-600">
+                                                                    未限制
+                                                                </Chip>
+                                                            )}
+                                                            <p className="text-xs text-gray-400">
+                                                                {invitation.fileInfo?.expiresAt && new Date(invitation.fileInfo.expiresAt) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) ? (
+                                                                    <>
+                                                                        <IoAlertOutline size={14} className="inline rounded-full bg-amber-500 p-0.5 text-zinc-900 mr-1" />
+                                                                        即將失效： {new Date(invitation.fileInfo.expiresAt).toLocaleDateString("zh-TW")}
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Check size={14} className="inline rounded-full bg-emerald-500 p-0.5 text-zinc-900 mr-1" />
+                                                                        {invitation.fileInfo?.expiresAt ? new Date(invitation.fileInfo.expiresAt).toLocaleDateString("zh-TW") : "未知"} 前有效
+                                                                    </>
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <Button
+                                                                size="sm"
+                                                                className="custom-button-trans-override bg-emerald-600 text-white flex-1"
+                                                                startContent={<Check size={18} />}
+                                                                isLoading={respondingInvitationId === invitation.id}
+                                                                onPress={() => respondToInvitation(invitation.id, invitation.shareId, "accept")}
+                                                            >
+                                                                接受
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                className="custom-button-trans-override bg-rose-500 text-white flex-1"
+                                                                startContent={<X size={18} />}
+                                                                isLoading={respondingInvitationId === invitation.id}
+                                                                onPress={() => respondToInvitation(invitation.id, invitation.shareId, "reject")}
+                                                            >
+                                                                拒絕
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CustomDrawerBody>
+                            <CustomDrawerFooter>
+                                <Button
+                                    className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200"
+                                    onPress={onClose}
+                                >
+                                    關閉
+                                </Button>
+                            </CustomDrawerFooter>
+                        </>
+                    )}
+                </CustomDrawerContent>
+            </CustomDrawer>
+
+            {/* Notifications Drawer */}
+            <CustomDrawer
+                isOpen={isNotificationsDrawerOpen}
+                onOpenChange={setIsNotificationsDrawerOpen}
+                variant="blur"
+                size="lg"
+            >
+                <CustomDrawerContent>
+                    {(onClose) => (
+                        <>
+                            <CustomDrawerHeader>
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-yellow-500/20 p-3 rounded-xl">
+                                        <BellRing size={24} className="text-yellow-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold">通知中心</h3>
+                                        <p className="text-sm text-gray-300">查看所有通知訊息</p>
+                                    </div>
+                                </div>
+                            </CustomDrawerHeader>
+                            <CustomDrawerBody>
+                                {isLoadingNotifications ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <Spinner size="lg" color="default" variant="dots" />
+                                    </div>
+                                ) : notifications.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                                        <BellRing size={48} className="mb-4 opacity-50" />
+                                        <p className="text-lg">目前沒有通知</p>
+                                        <p className="text-sm mt-2">當有新的通知時，它們會顯示在這裡</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {notifications.map((notif) => (
+                                            <div key={notif.id} className="bg-white/10 rounded-2xl p-4 shadow-xl hover:bg-white/15 transition-all duration-200">
+                                                <div className="flex items-start gap-4">
+                                                    <div className={`${getNotificationIconBg(notif.type)} p-3 rounded-xl flex-shrink-0`}>
+                                                        {getNotificationIcon(notif.type)}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <div>
+                                                                <p className="text-white font-semibold text-base">
+                                                                    {notif.type === "share-invite" ? "分享邀請" :
+                                                                        notif.type === "download-complete" ? "下載完成" :
+                                                                            notif.type === "share-expired" ? "分享過期" : "通知"}
+                                                                </p>
+                                                                <p className="text-gray-400 text-xs">{formatRelativeTime(notif.createdAt)}</p>
+                                                            </div>
+                                                            <Button
+                                                                size="sm"
+                                                                isIconOnly
+                                                                radius="full"
+                                                                className="custom-button-trans-override bg-zinc-400/40 shadow-xl group"
+                                                                isLoading={deletingNotificationId === notif.id}
+                                                                onPress={() => deleteNotification(notif.id)}
+                                                            >
+                                                                {deletingNotificationId !== notif.id && <Trash size={16} className="text-neutral-900 cursor-pointer group-hover:text-rose-500 transition-all duration-200" />}
+                                                            </Button>
+                                                        </div>
+                                                        <p className="text-gray-300 text-sm">
+                                                            {notif.message || `檔案 "${notif.fileInfo?.displayName || "未知"}" 的通知`}
+                                                        </p>
+                                                        {notif.fileInfo && (
+                                                            <div className="flex items-center gap-2 mt-2 p-2 bg-white/5 rounded-lg">
+                                                                <div className={`${getFileIconBgColor(notif.fileInfo.contentType)} p-1.5 rounded`}>
+                                                                    {getFileIcon(notif.fileInfo.contentType)}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-white text-sm font-medium">{notif.fileInfo.displayName}</p>
+                                                                    <p className="text-gray-400 text-xs">{formatBytes(notif.fileInfo.size || 0)}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CustomDrawerBody>
+                            <CustomDrawerFooter>
+                                <Button
+                                    className="custom-button-trans-override bg-white/10 border border-white/30 text-gray-200"
+                                    onPress={onClose}
+                                >
+                                    關閉
+                                </Button>
+                            </CustomDrawerFooter>
+                        </>
+                    )}
+                </CustomDrawerContent>
+            </CustomDrawer>
         </div>
     );
 }
