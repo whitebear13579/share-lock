@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/utils/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
+import { auth } from "firebase-admin";
 
 /*
 
@@ -45,10 +47,51 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        await shareRef.update({
+        // Get file data for sharedWithMe record
+        const fileDoc = await adminDb.collection("files").doc(shareData?.fileId).get();
+        const fileData = fileDoc.data();
+
+        // Get user email
+        let userEmail: string | undefined;
+        try {
+            const userRecord = await auth().getUser(userId);
+            userEmail = userRecord.email;
+        } catch {
+            // Ignore error if unable to get user email
+        }
+
+        // Use batch write for atomicity
+        const batch = adminDb.batch();
+
+        // Update share with boundUid
+        batch.update(shareRef, {
             boundUid: userId,
             boundAt: new Date(),
         });
+
+        // Create sharedWithMe record
+        const sharedWithMeRef = adminDb.collection("sharedWithMe").doc();
+        batch.set(sharedWithMeRef, {
+            shareId: shareId,
+            fileId: shareData?.fileId,
+            ownerUid: userId, // The receiver's UID
+            ownerEmail: userEmail,
+            fileName: fileData?.displayName || fileData?.originalName || "Unknown",
+            fileSize: fileData?.size || 0,
+            contentType: fileData?.contentType || "application/octet-stream",
+            sharedAt: new Date(),
+            lastAccessedAt: null,
+            accessCount: 0,
+            expiresAt: fileData?.expiresAt,
+        });
+
+        // Update user's totalFilesReceived counter (cumulative, never decreases)
+        const userRef = adminDb.collection("users").doc(userId);
+        batch.set(userRef, {
+            totalFilesReceived: FieldValue.increment(1),
+        }, { merge: true });
+
+        await batch.commit();
 
         return NextResponse.json({
             success: true,
