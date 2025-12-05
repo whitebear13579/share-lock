@@ -6,8 +6,8 @@ import { auth } from "firebase-admin";
 
     method: GET /api/statistics/overview
     Get statistics overview for the authenticated user
-    - Files shared by user (including expired)
-    - Files received by user (including expired)
+    - Files shared by user (cumulative count from user document)
+    - Files received by user (cumulative count from user document)
 
 */
 
@@ -36,22 +36,11 @@ export async function GET(request: NextRequest) {
 
         const uid = decodedToken.uid;
 
-        // Get all files shared by the user
-        const filesSnapshot = await adminDb
-            .collection("files")
-            .where("ownerUid", "==", uid)
-            .where("revoked", "==", false)
-            .get();
+        const userDoc = await adminDb.collection("users").doc(uid).get();
+        const userData = userDoc.data();
 
-        const totalFilesShared = filesSnapshot.size;
-
-        // Get all files received by the user (including expired)
-        const sharedWithMeSnapshot = await adminDb
-            .collection("sharedWithMe")
-            .where("ownerUid", "==", uid)
-            .get();
-
-        const totalFilesReceived = sharedWithMeSnapshot.size;
+        const totalFilesShared = userData?.totalFilesShared || 0;
+        const totalFilesReceived = userData?.totalFilesReceived || 0;
 
         return NextResponse.json({
             filesShared: totalFilesShared,
