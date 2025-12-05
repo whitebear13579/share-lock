@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-// @ts-expect-error - the globals.css file is missing type definitions
 import "./globals.css";
 import { HeroUIProvider, ToastProvider } from "@heroui/react";
 import { AuthProvider } from "@/utils/authProvider";
