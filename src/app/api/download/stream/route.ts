@@ -128,6 +128,22 @@ export async function GET(request: NextRequest) {
             console.error('failed to record download history:', historyError);
         }
 
+        // Record access log for download count tracking
+        try {
+            await adminDb.collection("accessLogs").add({
+                fileId: tokenData.fileId,
+                shareId: tokenData.shareId,
+                type: "download",
+                timestamp: new Date(),
+                ip: request.headers.get('x-forwarded-for') ||
+                    request.headers.get('x-real-ip') ||
+                    'unknown',
+                userAgent: request.headers.get('user-agent') || 'unknown',
+            });
+        } catch (logError) {
+            console.error('failed to record access log:', logError);
+        }
+
         return new NextResponse(webStream, {
             headers: {
                 'Content-Type': tokenData.contentType || 'application/octet-stream',
