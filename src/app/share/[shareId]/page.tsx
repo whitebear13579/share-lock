@@ -16,7 +16,7 @@ import {
     verifyAuthenticator
 } from "@/utils/webauthn";
 import { hashPin } from "@/utils/crypto";
-import { CircleX, CircleAlert, CircleCheck, ArrowLeft, Download, Lock, LockOpen, InfoIcon, Check } from "lucide-react";
+import { CircleX, CircleAlert, ArrowLeft, Download, Lock, LockOpen, InfoIcon, Check } from "lucide-react";
 
 type ShareMode = "device" | "account" | "pin" | "public";
 
@@ -586,11 +586,24 @@ export default function SharePage() {
                 requestBody.sessionToken = sessionToken;
             }
 
+            // Build headers with optional Authorization for logged-in users
+            const headers: Record<string, string> = {
+                "Content-Type": "application/json",
+            };
+
+            // Add Authorization header if user is logged in (for sharedWithMe tracking)
+            if (user) {
+                try {
+                    const idToken = await user.getIdToken();
+                    headers["Authorization"] = `Bearer ${idToken}`;
+                } catch {
+                    
+                }
+            }
+
             const response = await fetch("/api/download/issue-url", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers,
                 body: JSON.stringify(requestBody),
             });
 
