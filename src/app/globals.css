@@ -13,50 +13,62 @@
         font-size: 0.75rem !important;
         line-height: 1rem !important;
     }
+
     .text-sm {
         font-size: 0.875rem !important;
         line-height: 1.25rem !important;
     }
+
     .text-base {
         font-size: 1rem !important;
         line-height: 1.5rem !important;
     }
+
     .text-lg {
         font-size: 1.125rem !important;
         line-height: 1.75rem !important;
     }
+
     .text-xl {
         font-size: 1.25rem !important;
         line-height: 1.75rem !important;
     }
+
     .text-2xl {
         font-size: 1.5rem !important;
         line-height: 2rem !important;
     }
+
     .text-3xl {
         font-size: 1.875rem !important;
         line-height: 2.25rem !important;
     }
+
     .text-4xl {
         font-size: 2.25rem !important;
         line-height: 2.5rem !important;
     }
+
     .text-5xl {
         font-size: 3rem !important;
         line-height: 1 !important;
     }
+
     .text-6xl {
         font-size: 3.75rem !important;
         line-height: 1 !important;
     }
+
     .text-7xl {
         font-size: 4.5rem !important;
         line-height: 1 !important;
     }
+
     .text-8xl {
         font-size: 6rem !important;
         line-height: 1 !important;
     }
+
     .text-9xl {
         font-size: 8rem !important;
         line-height: 1 !important;
@@ -79,6 +91,38 @@
 
 .custom-input-trans-animate:active {
     scale: 97% 97% !important;
+}
+
+[data-slot="toast"][data-color="success"] [data-slot="icon"] {
+    color: #22c55e;
+}
+
+[data-slot="toast"][data-color="danger"] [data-slot="icon"] {
+    color: #ef4444;
+}
+
+[data-slot="toast"][data-color="warning"] [data-slot="icon"] {
+    color: #f59e0b;
+}
+
+[data-slot="toast"][data-color="primary"] [data-slot="icon"] {
+    color: #6366f1;
+}
+
+[data-slot="toast"][data-color="secondary"] [data-slot="icon"] {
+    color: #8b5cf6;
+}
+
+[data-slot="toast"][data-color="success"] [data-slot="progress-indicator"] {
+    background: linear-gradient(to right, #22c55e, #4ade80);
+}
+
+[data-slot="toast"][data-color="danger"] [data-slot="progress-indicator"] {
+    background: linear-gradient(to right, #ef4444, #f87171);
+}
+
+[data-slot="toast"][data-color="warning"] [data-slot="progress-indicator"] {
+    background: linear-gradient(to right, #f59e0b, #fbbf24);
 }
 
 :root {
