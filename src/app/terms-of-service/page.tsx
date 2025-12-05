@@ -14,10 +14,10 @@ export default function Terms() {
             const checkScreenSize = () => {
                 setIsMobile(window.innerWidth < 1000);
             };
-    
+
             checkScreenSize();
             window.addEventListener('resize', checkScreenSize);
-    
+
             return () => window.removeEventListener('resize', checkScreenSize);
         }, []);
 
@@ -28,7 +28,7 @@ export default function Terms() {
                     <h1 className="font-bold text-3xl text-gray-100">Terms of Service</h1>
                     <p className="text-gray-300 py-6 px-1"><strong>Last Updated:</strong> November 30, 2025</p>
                     <div>
-                        <p className="text-gray-300 px-1">Welcome, and thank you for your interest in <strong>Share Lock</strong> ("Share Lock Team", "we", "our", or "us").<br />These Terms of Service (“Terms”) govern your access to and use of the Share Lock platform, including our website, software, and related services (collectively, the “Service”).</p>
+                        <p className="text-gray-300 px-1">Welcome, and thank you for your interest in <strong>Share Lock</strong> (&quot;Share Lock Team&quot;, &quot;we&quot;, &quot;our&quot;, or &quot;us&quot;).<br />These Terms of Service (“Terms”) govern your access to and use of the Share Lock platform, including our website, software, and related services (collectively, the &quot;Service&quot;).</p>
                         <p className="text-gray-300 px-1 py-3">By using the Service, you agree to these Terms.<br />Please also review our <Link href="/privacy-policy" className="text-sky-300 font-bold hover:underline active:scale-95 transition-all duration-200 inline-block">
                             Privacy policy
                         </Link>, which explains how we collect, use, and share personal data.
@@ -366,7 +366,7 @@ export default function Terms() {
                                             <span className="text-gray-300 py-0 text-sm flex flex-row items-start"><Dot className="text-gray-300 flex-shrink-0"/>Limited Use Compliance: We comply with the Google API Services User Data Policy, including the Limited Use requirements.</span>
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-gray-300 py-0 text-sm flex flex-row items-start"><Dot className="text-gray-300 flex-shrink-0"/>Revocation and Deletion: You may revoke Share Lock's access at any time via your Google Account settings. Upon request, we will delete your data from our systems.</span>
+                                            <span className="text-gray-300 py-0 text-sm flex flex-row items-start"><Dot className="text-gray-300 flex-shrink-0"/>Revocation and Deletion: You may revoke Share Lock&apos;s access at any time via your Google Account settings. Upon request, we will delete your data from our systems.</span>
                                         </div>
                                     </div>
                             </CardBody>
@@ -385,7 +385,7 @@ export default function Terms() {
                             <CardBody className="px-6 py-1">
                                 <div className="px-1">
                                     <div className="items-center py-3">
-                                    <p className="text-gray-300 py-2 text-sm">These Terms, together with our Privacy Policy, are the entire agreement between you and Share Lock.<br />If any provision is invalid, the remaining provisions remain enforceable.<br />Share Lock's failure to enforce any right is not a waiver.</p>
+                                    <p className="text-gray-300 py-2 text-sm">These Terms, together with our Privacy Policy, are the entire agreement between you and Share Lock.<br />If any provision is invalid, the remaining provisions remain enforceable.<br />Share Lock&apos;s failure to enforce any right is not a waiver.</p>
                                     </div>
                                 </div>
                             </CardBody>

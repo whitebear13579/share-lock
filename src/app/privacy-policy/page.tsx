@@ -14,10 +14,10 @@ export default function Terms() {
             const checkScreenSize = () => {
                 setIsMobile(window.innerWidth < 1000);
             };
-    
+
             checkScreenSize();
             window.addEventListener('resize', checkScreenSize);
-    
+
             return () => window.removeEventListener('resize', checkScreenSize);
         }, []);
 
@@ -28,7 +28,7 @@ export default function Terms() {
                     <h1 className="font-bold text-3xl text-gray-100">Privacy Policy</h1>
                     <p className="text-gray-300 py-6 px-1"><strong>Last Updated:</strong> December 1, 2025</p>
                     <div>
-                        <p className="text-gray-300 px-1">Welcome, and thank you for your interest in <strong>Share Lock</strong> ("Share Lock Team", "we", "our", or "us").<br />We are strongly committed to respecting your privacy and keeping secure any information you share with us.</p>
+                        <p className="text-gray-300 px-1">Welcome, and thank you for your interest in <strong>Share Lock</strong> (&quot;Share Lock Team&quot;, &quot;we&quot;, &quot;our&quot;, or &quot;us&quot;).<br />We are strongly committed to respecting your privacy and keeping secure any information you share with us.</p>
                         <p className="text-gray-300 px-1 py-3">This Privacy Policy explains how we collect, use, and share your personal data, and describes the rights that may be available to you under applicable law.<br />Please also review our <Link href="/terms-of-service" className="text-sky-300 font-bold hover:underline active:scale-95 transition-all duration-200 inline-block">
                             Terms of Service
                         </Link>, which explain the rules for using the service, and clarify the rights and responsibilities of both the service provider and the users.
