@@ -115,9 +115,10 @@ export async function POST(request: NextRequest) {
         }
 
         const rpId = process.env.NEXT_PUBLIC_DOMAIN || "localhost";
-        const expectedOrigin = process.env.NODE_ENV === "production"
-            ? `https://${rpId}`
-            : `http://localhost:3000`;
+        const expectedOrigin = process.env.NEXT_PUBLIC_SITE_URL
+            || (process.env.NODE_ENV === "production"
+                ? `https://${rpId}`
+                : `http://localhost:3000`);
 
         const verification = await verifyAuthenticationResponse({
             response: credential,
