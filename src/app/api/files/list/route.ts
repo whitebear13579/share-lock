@@ -12,12 +12,9 @@ import { Timestamp } from "firebase-admin/firestore";
 
 export async function GET(request: NextRequest) {
     try {
-        console.log("📁 Files API called");
-
         // get the authorization header
         const authHeader = request.headers.get("authorization");
         if (!authHeader?.startsWith("Bearer ")) {
-            console.error("❌ No authorization header");
             return NextResponse.json(
                 { error: "Unauthorized - No token provided" },
                 { status: 401 }
@@ -29,9 +26,7 @@ export async function GET(request: NextRequest) {
         let decodedToken;
         try {
             decodedToken = await auth().verifyIdToken(idToken);
-            console.log("✅ Token verified for user:", decodedToken.uid);
-        } catch (error) {
-            console.error("❌ Token verification error:", error);
+        } catch {
             return NextResponse.json(
                 { error: "Unauthorized - Invalid token" },
                 { status: 401 }
@@ -42,22 +37,16 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const type = searchParams.get("type") || "myFiles";
 
-        console.log(`📂 Fetching files of type: ${type} for user: ${uid}`);
-
         const now = Timestamp.now();
 
         if (type === "myFiles") {
             // Get files owned by the user (active only)
-            console.log("🔍 Querying myFiles...");
-
             // Try a simpler query first to avoid index issues
             const filesSnapshot = await adminDb
                 .collection("files")
                 .where("ownerUid", "==", uid)
                 .where("revoked", "==", false)
                 .get();
-
-            console.log(`✅ Found ${filesSnapshot.size} total files (before filtering)`);
 
             // Filter and sort in memory
             const allFiles = filesSnapshot.docs
@@ -71,8 +60,6 @@ export async function GET(request: NextRequest) {
                     const bExpires = (b as { expiresAt?: { toMillis(): number } }).expiresAt?.toMillis() || 0;
                     return bExpires - aExpires;
                 });
-
-            console.log(`✅ Found ${allFiles.length} active files after filtering`);
 
             const files = await Promise.all(
                 allFiles.map(async (docData) => {
@@ -109,6 +96,16 @@ export async function GET(request: NextRequest) {
                         }
                     });
 
+                    // Get shareId for this file (from shares collection)
+                    const sharesSnapshot = await adminDb
+                        .collection("shares")
+                        .where("fileId", "==", docId)
+                        .where("valid", "==", true)
+                        .limit(1)
+                        .get();
+
+                    const shareId = sharesSnapshot.empty ? null : sharesSnapshot.docs[0].id;
+
                     return {
                         id: docId,
                         name: fileData.displayName || fileData.originalName,
@@ -125,21 +122,18 @@ export async function GET(request: NextRequest) {
                         contentType: fileData.contentType,
                         remainingDownloads: fileData.remainingDownloads,
                         maxDownloads: fileData.maxDownloads,
+                        shareId,
                     };
                 })
             );
 
-            console.log(`✅ Returning ${files.length} myFiles`);
             return NextResponse.json({ files });
         } else if (type === "sharedWithMe") {
             // Get files shared with the user (active only)
-            console.log("🔍 Querying sharedWithMe...");
             const sharedSnapshot = await adminDb
                 .collection("sharedWithMe")
                 .where("ownerUid", "==", uid)
                 .get();
-
-            console.log(`✅ Found ${sharedSnapshot.size} shared entries (before filtering)`);
 
             // Filter and sort in memory
             const activeShared = sharedSnapshot.docs
@@ -153,8 +147,6 @@ export async function GET(request: NextRequest) {
                     const bExpires = (b as { expiresAt?: { toMillis(): number } }).expiresAt?.toMillis() || 0;
                     return bExpires - aExpires;
                 });
-
-            console.log(`✅ Found ${activeShared.length} active shared files after filtering`);
 
             const files = await Promise.all(
                 activeShared.map(async (docData) => {
@@ -187,10 +179,12 @@ export async function GET(request: NextRequest) {
                     return {
                         id: docData.id,
                         fileId: (sharedData.fileId as string),
+                        shareId: (sharedData.shareId as string),
                         name: sharedData.fileName || fileData.displayName || fileData.originalName,
                         size: formatBytes(sharedData.fileSize || fileData.size),
                         sizeBytes: sharedData.fileSize || fileData.size,
                         sharedWith: [ownerEmail],
+                        ownerEmail: ownerEmail,
                         expiryDate: sharedData.expiresAt?.toDate?.().toLocaleDateString("zh-TW") || "",
                         status: "active" as const,
                         isProtected: fileData.shareMode === "device",
@@ -199,6 +193,8 @@ export async function GET(request: NextRequest) {
                         views: sharedData.accessCount || 0,
                         downloads: 0, // Shared files don't track individual downloads
                         contentType: sharedData.contentType || fileData.contentType,
+                        remainingDownloads: fileData.remainingDownloads,
+                        maxDownloads: fileData.maxDownloads,
                         lastAccessedAt: sharedData.lastAccessedAt?.toDate?.().toLocaleDateString("zh-TW") || "",
                     };
                 })
@@ -207,37 +203,33 @@ export async function GET(request: NextRequest) {
             // Filter out null values (deleted files)
             const validFiles = files.filter((file) => file !== null);
 
-            console.log(`✅ Returning ${validFiles.length} sharedWithMe files`);
             return NextResponse.json({ files: validFiles });
         } else if (type === "expired") {
-            // Get expired files owned by the user
-            console.log("🔍 Querying expired files...");
+            // Get expired files owned by the user (including revoked files)
             const filesSnapshot = await adminDb
                 .collection("files")
                 .where("ownerUid", "==", uid)
-                .where("revoked", "==", false)
                 .get();
 
-            console.log(`✅ Found ${filesSnapshot.size} total files`);
-
-            // Filter expired files in memory
-            const expiredFiles = filesSnapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter((fileData) => {
-                    const expiresAt = (fileData as { expiresAt?: { toMillis(): number } }).expiresAt;
-                    return expiresAt && expiresAt.toMillis() <= now.toMillis();
+            // Filter expired or revoked files in memory
+            const expiredFileDocs = filesSnapshot.docs
+                .filter((doc) => {
+                    const fileData = doc.data();
+                    const expiresAt = fileData.expiresAt;
+                    const isRevoked = fileData.revoked === true;
+                    const isExpired = expiresAt && expiresAt.toMillis() <= now.toMillis();
+                    // Include files that are either revoked OR expired
+                    return isRevoked || isExpired;
                 })
                 .sort((a, b) => {
-                    const aExpires = (a as { expiresAt?: { toMillis(): number } }).expiresAt?.toMillis() || 0;
-                    const bExpires = (b as { expiresAt?: { toMillis(): number } }).expiresAt?.toMillis() || 0;
+                    const aExpires = a.data().expiresAt?.toMillis() || 0;
+                    const bExpires = b.data().expiresAt?.toMillis() || 0;
                     return bExpires - aExpires;
                 })
                 .slice(0, 50); // Limit to 50
 
-            console.log(`✅ Found ${expiredFiles.length} expired files after filtering`);
-
             const files = await Promise.all(
-                filesSnapshot.docs.map(async (doc) => {
+                expiredFileDocs.map(async (doc) => {
                     const fileData = doc.data();
 
                     // Get access logs for views and downloads
@@ -269,6 +261,15 @@ export async function GET(request: NextRequest) {
                         }
                     });
 
+                    // Get shareId for this file (from shares collection)
+                    const sharesSnapshot = await adminDb
+                        .collection("shares")
+                        .where("fileId", "==", doc.id)
+                        .limit(1)
+                        .get();
+
+                    const shareId = sharesSnapshot.empty ? null : sharesSnapshot.docs[0].id;
+
                     return {
                         id: doc.id,
                         name: fileData.displayName || fileData.originalName,
@@ -276,6 +277,7 @@ export async function GET(request: NextRequest) {
                         sizeBytes: fileData.size,
                         sharedWith,
                         expiryDate: fileData.expiresAt.toDate().toLocaleDateString("zh-TW"),
+                        revokedDate: fileData.revokedAt?.toDate().toLocaleDateString("zh-TW") || null,
                         status: "expired" as const,
                         isProtected: fileData.shareMode === "device",
                         shareMode: fileData.shareMode,
@@ -285,26 +287,20 @@ export async function GET(request: NextRequest) {
                         contentType: fileData.contentType,
                         remainingDownloads: fileData.remainingDownloads,
                         maxDownloads: fileData.maxDownloads,
+                        shareId,
+                        revoked: fileData.revoked === true,
                     };
                 })
             );
 
-            console.log(`✅ Returning ${files.length} expired files`);
             return NextResponse.json({ files });
         } else {
-            console.error("❌ Invalid type parameter:", type);
             return NextResponse.json(
                 { error: "Invalid type parameter" },
                 { status: 400 }
             );
         }
     } catch (error) {
-        console.error("❌ Error fetching files list:", error);
-        console.error("Error details:", {
-            name: error instanceof Error ? error.name : "Unknown",
-            message: error instanceof Error ? error.message : "Unknown error",
-            stack: error instanceof Error ? error.stack : undefined
-        });
         return NextResponse.json(
             {
                 error: "Internal server error",
