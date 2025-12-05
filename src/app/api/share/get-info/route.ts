@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // check revocation
-        if (shareData.revoked) {
+        // check revocation (check both shareData and fileData)
+        if (shareData.revoked || fileData.revoked) {
             return NextResponse.json(
                 { error: "此分享已被撤銷" },
                 { status: 403 }
@@ -89,6 +89,23 @@ export async function POST(request: NextRequest) {
 
         const shareMode = shareData.shareMode || fileData.shareMode || "public";
         const pinHash = shareData.pinHash || fileData.pinHash;
+
+        // Record access log for view count tracking
+        try {
+            await adminDb.collection("accessLogs").add({
+                fileId: shareData.fileId,
+                shareId: shareId,
+                type: "access",
+                timestamp: new Date(),
+                ip: request.headers.get('x-forwarded-for') ||
+                    request.headers.get('x-real-ip') ||
+                    'unknown',
+                userAgent: request.headers.get('user-agent') || 'unknown',
+            });
+        } catch (logError) {
+            // Don't fail the request if logging fails
+            console.error("Failed to record access log:", logError);
+        }
 
         return NextResponse.json({
             success: true,
