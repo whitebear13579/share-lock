@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Spinner } from "@heroui/react";
 import PageTransition from "@/components/pageTransition";
 
-export default function AuthAction() {
+function AuthActionContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [loading, setLoading] = useState(true);
@@ -65,5 +65,24 @@ export default function AuthAction() {
                 </div>
             </div>
         </PageTransition>
+    );
+}
+
+export default function AuthAction() {
+    return (
+        <Suspense
+            fallback={
+                <PageTransition>
+                    <div className="flex flex-col min-h-screen g-linear-205 from-slate-700 to-neutral-800 to-55% items-center justify-center">
+                        <div className="flex flex-col items-center gap-4 text-white">
+                            <Spinner size="lg" color="primary" />
+                            <p>正在載入...</p>
+                        </div>
+                    </div>
+                </PageTransition>
+            }
+        >
+            <AuthActionContent />
+        </Suspense>
     );
 }

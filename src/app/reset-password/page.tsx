@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { gsap } from "gsap";
 import CustomButton from "@/components/button";
@@ -25,7 +25,7 @@ import {
 import { Spinner } from "@heroui/react";
 import Link from "next/link";
 
-export default function ResetPassword() {
+function ResetPasswordContent() {
     const [isVisible, setIsVisible] = useState(false);
     const [isConfirmVisible, setIsConfirmVisible] = useState(false);
     const router = useRouter();
@@ -702,5 +702,24 @@ export default function ResetPassword() {
                 </div>
             </PageTransition>
         </ProtectedRoute>
+    );
+}
+
+export default function ResetPassword() {
+    return (
+        <Suspense
+            fallback={
+                <PageTransition>
+                    <div className="flex flex-col min-h-screen bg-linear-205 from-slate-700 to-neutral-800 to-55% items-center justify-center">
+                        <div className="flex flex-col items-center gap-4 text-white">
+                            <Spinner size="lg" color="primary" />
+                            <p>正在載入...</p>
+                        </div>
+                    </div>
+                </PageTransition>
+            }
+        >
+            <ResetPasswordContent />
+        </Suspense>
     );
 }

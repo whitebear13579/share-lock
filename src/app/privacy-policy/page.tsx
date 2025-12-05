@@ -6,7 +6,6 @@ import {
     CardBody,
     Link,
 } from "@heroui/react";
-import { Dot } from "lucide-react";
 
 export default function Terms() {
     const [isMobile, setIsMobile] = useState(false);
