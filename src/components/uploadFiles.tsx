@@ -40,6 +40,7 @@ import {
 import { parseDate } from "@internationalized/date";
 import gsap from "gsap";
 import { ArrowUpFromLine, Check, CircleAlert, Copy, Link, Plus, Trash } from "lucide-react";
+import { hashPin } from "@/utils/crypto";
 
 type Step = "select" | "uploading" | "settings";
 type ShareMode = "device" | "account" | "pin" | "public";
@@ -94,6 +95,12 @@ const truncateString = (str: string, maxLength: number = 35): string => {
     const backChars = Math.floor(charsToShow / 2);
 
     return str.substring(0, frontChars) + ellipsis + str.substring(str.length - backChars);
+};
+
+const truncateFileName = (name: string, maxLength: number = 15): string => {
+    if (name.length <= maxLength) return name;
+    const keepLength = Math.floor((maxLength - 3) / 2);
+    return `${name.slice(0, keepLength)}...${name.slice(-keepLength)}`;
 };
 
 export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }: Props) {
@@ -466,7 +473,7 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
                 remainingDownloads: shareSettings.maxDownloads,
                 shareMode: shareSettings.shareMode,
                 ...(shareSettings.shareMode === "pin" && {
-                    pinHash: await hashPin(shareSettings.pin!),
+                    pinHash: hashPin(shareSettings.pin!),
                 }),
             }, { merge: true });
 
@@ -479,7 +486,7 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
                 valid: true,
                 shareMode: shareSettings.shareMode,
                 ...(shareSettings.shareMode === "pin" && {
-                    pinHash: await hashPin(shareSettings.pin!),
+                    pinHash: hashPin(shareSettings.pin!),
                 }),
             });
 
@@ -512,19 +519,14 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
             // onSuccess will be called when user clicks "完成" button
         } catch (err) {
             console.error("Create share URL error:", err);
-            setError("建立分享失敗，請重試");
+            if (err instanceof Error && err.message.includes("Web Crypto API")) {
+                setError(err.message);
+            } else {
+                setError("建立分享失敗，請重試");
+            }
         } finally {
             setIsCreatingShare(false);
         }
-    };
-
-    // hashed pin
-    const hashPin = async (pin: string): Promise<string> => {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(pin);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
     };
 
     const copyToClipboard = async (text: string) => {
@@ -922,7 +924,7 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
                                                 >
                                                     <div className="flex-1 space-y-1 pl-2">
                                                         <div className="text-white font-medium text-lg">
-                                                            {file.name}
+                                                            {truncateFileName(file.name, 30)}
                                                         </div>
                                                         <div className="text-gray-400 text-sm">
                                                             {formatBytes(file.size)}
@@ -1025,7 +1027,8 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
                                                         const jsDate = new Date(
                                                             (date as { year: number; month: number; day: number }).year,
                                                             (date as { year: number; month: number; day: number }).month - 1,
-                                                            (date as { year: number; month: number; day: number }).day
+                                                            (date as { year: number; month: number; day: number }).day,
+                                                            12, 0, 0, 0
                                                         );
 
                                                         // Validate date immediately
