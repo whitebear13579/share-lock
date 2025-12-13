@@ -975,12 +975,6 @@ export default function Settings() {
                                 <span className="text-lg font-medium">帳號設定</span>
                             </NextLink>
                         </NavbarMenuItem>
-                        <NavbarMenuItem>
-                            <NextLink href="/dashboard/bug-report" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 text-white transition-colors">
-                                <Star size={20} />
-                                <span className="text-lg">漏洞有賞計畫</span>
-                            </NextLink>
-                        </NavbarMenuItem>
                     </NavbarMenu>
                 </Navbar>
             )}
