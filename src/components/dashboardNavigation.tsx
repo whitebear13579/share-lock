@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { House, Folder, Cog, Star, LogOut } from "lucide-react";
+import { House, Folder, Cog, LogOut } from "lucide-react";
 import CustomTabs from "./tabs";
 import CustomButton from "./button";
 
@@ -16,7 +16,6 @@ export const NAVIGATION_ROUTES = [
     { key: "dashboard", path: "/dashboard", label: "資訊主頁", icon: <House size={18} /> },
     { key: "files", path: "/dashboard/files", label: "我的檔案", icon: <Folder size={18} /> },
     { key: "settings", path: "/dashboard/settings", label: "帳號設定", icon: <Cog size={18} /> },
-    { key: "bug-report", path: "/dashboard/bug-report", label: "漏洞有賞計畫", icon: <Star size={18} /> },
 ];
 
 export function getNavigationDirection(fromPath: string, toPath: string): "left" | "right" {
