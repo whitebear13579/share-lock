@@ -1,5 +1,5 @@
 "use client";
-import { FileText, LogIn, SendHorizonal, Upload, LogOut } from "lucide-react";
+import { FileText, LogIn, SendHorizonal, Upload, LogOut, Check, SmileIcon } from "lucide-react";
 import NextImage from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
@@ -11,7 +11,7 @@ import CustomTabs from "@/components/tabs";
 import PageTransition from "@/components/pageTransition";
 import { useAuth } from "@/utils/authProvider";
 import { Avatar } from "@heroui/avatar";
-import { Navbar, NavbarContent, NavbarBrand, NavbarMenuToggle } from "@heroui/react";
+import { Navbar, NavbarContent, NavbarBrand, NavbarMenuToggle, Popover, PopoverTrigger, PopoverContent } from "@heroui/react";
 import UploadFiles from "@/components/uploadFiles";
 import { NAVIGATION_ROUTES } from "@/components/dashboardNavigation";
 
@@ -31,6 +31,12 @@ export default function Home() {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [shareInput, setShareInput] = useState("");
     const [isMobile, setIsMobile] = useState(false);
+    const [pdfPopover, setPdfPopover] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
+
+    const handlePdfDownload = () => {
+        setPdfPopover({ isOpen: true, message: '簡報還沒做呢，親' });
+        setTimeout(() => setPdfPopover({ isOpen: false, message: '' }), 3000);
+    };
 
     const handleShareNavigate = async () => {
         if (!shareInput.trim()) return;
@@ -216,22 +222,22 @@ export default function Home() {
                 tl.to(
                     mainContentRef.current,
                     {
-                        y: -((window.innerHeight)+50),
+                        y: -((window.innerHeight) + 50),
                         duration: 0.5,
                         ease: "power2.inOut",
                     },
                     "+=0"
                 )
 
-                .to(
-                    footerRef.current,
-                    {
-                        y: 200,
-                        duration: 0.4,
-                        ease: "power2.in",
-                    },
-                    "-=0.4"
-                );
+                    .to(
+                        footerRef.current,
+                        {
+                            y: 200,
+                            duration: 0.4,
+                            ease: "power2.in",
+                        },
+                        "-=0.4"
+                    );
             }
         });
     };
@@ -275,21 +281,44 @@ export default function Home() {
                 <div ref={mainContentRef} className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative z-20 overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
                     <div className="absolute top-6 right-6 flex space-x-3">
                         <div ref={pdfDownBtnRef}>
-                            <CustomButton
-                                variant="blur"
-                                size="lg"
-                                radius="full"
-                                startContent={
-                                    <FileText
-                                        size={18}
-                                        className="text-gray-200"
-                                    />
-                                }
-                                isDisabled={loading}
-                                className="text-base hover:bg-white/20 text-gray-200"
+                            <Popover
+                                isOpen={pdfPopover.isOpen}
+                                onOpenChange={(open) => !open && setPdfPopover({ isOpen: false, message: '' })}
+                                placement="bottom"
+                                offset={8}
+                                showArrow={true}
+                                classNames={{
+                                    base: "before:bg-emerald-700",
+                                    content: "bg-emerald-600 border-emerald-700 border-2"
+                                }}
                             >
-                                PDF 下載
-                            </CustomButton>
+                                <PopoverTrigger>
+                                    <CustomButton
+                                        variant="blur"
+                                        size="lg"
+                                        radius="full"
+                                        startContent={
+                                            <FileText
+                                                size={18}
+                                                className="text-gray-200"
+                                            />
+                                        }
+                                        isDisabled={loading}
+                                        onPress={handlePdfDownload}
+                                        className="text-base hover:bg-white/20 text-gray-200"
+                                    >
+                                        PDF 下載
+                                    </CustomButton>
+                                </PopoverTrigger>
+                                <PopoverContent>
+                                    <div className="px-3 py-2">
+                                        <div className="flex items-center gap-2">
+                                            <SmileIcon size={20} className="text-white" />
+                                            <span className="text-base text-white font-medium">{pdfPopover.message}</span>
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                         <div ref={loginBtnRef}>
                             {user ? (
