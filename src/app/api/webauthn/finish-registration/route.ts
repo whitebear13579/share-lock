@@ -93,10 +93,29 @@ export async function POST(request: NextRequest) {
         const backupEligible = regInfo.credentialDeviceType === "multiDevice";
         const backupState = regInfo.credentialBackedUp || false;
 
-        // block backup-eligible authenticators
-        if (backupEligible) {
+        /*
+            Apple 的 Passkey 預設儲存在「密碼」app 中，會透過 iCloud Keychain 同步
+            因為 Apple 裝置上沒有任何 app 可以做到真正的本地端儲存 Passkey
+            所以這裡允許使用 Apple 裝置的驗證器可以儲存在密碼 app 中。
+
+            Apple authenticators AAGUID:
+            - iCloud Keychain (iOS/macOS): fbfc3007-154e-4ecc-8c0b-6e020557d7bd
+            - iCloud Keychain (newer): f24a8e70-d0d3-f82c-2937-32523cc4de5a
+            - Apple Touch ID / Face ID: adce0002-35bc-c60a-648b-0b25f1f05503
+        */
+        const appleAAGUIDs = [
+            "fbfc3007-154e-4ecc-8c0b-6e020557d7bd",
+            "f24a8e70-d0d3-f82c-2937-32523cc4de5a",
+            "adce0002-35bc-c60a-648b-0b25f1f05503",
+            "00000000-0000-0000-0000-000000000000",
+        ];
+
+        const isAppleAuthenticator = appleAAGUIDs.includes(aaguid);
+
+        // block backup-eligible authenticators, except for Apple devices
+        if (backupEligible && !isAppleAuthenticator) {
             return NextResponse.json(
-                { error: "不允許使用具備份能力的驗證器" },
+                { error: "不允許使用具備份能力的驗證器（Apple 裝置除外）" },
                 { status: 400 }
             );
         }
