@@ -41,7 +41,6 @@ export async function GET(request: NextRequest) {
 
         if (type === "myFiles") {
             // Get files owned by the user (active only)
-            // Try a simpler query first to avoid index issues
             const filesSnapshot = await adminDb
                 .collection("files")
                 .where("ownerUid", "==", uid)
@@ -67,7 +66,6 @@ export async function GET(request: NextRequest) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const fileData = docData as Record<string, any>;
 
-                    // Get access logs for views and downloads
                     const accessLogsSnapshot = await adminDb
                         .collection("accessLogs")
                         .where("fileId", "==", docId)
@@ -89,12 +87,20 @@ export async function GET(request: NextRequest) {
                         .get();
 
                     const sharedWith: string[] = [];
-                    sharedWithMeSnapshot.forEach((sharedDoc) => {
+                    for (const sharedDoc of sharedWithMeSnapshot.docs) {
                         const sharedData = sharedDoc.data();
-                        if (sharedData.ownerEmail) {
-                            sharedWith.push(sharedData.ownerEmail);
+                        // ownerUid in sharedWithMe is the recipient (the person who accepted the share)
+                        if (sharedData.ownerUid) {
+                            try {
+                                const recipientUser = await auth().getUser(sharedData.ownerUid);
+                                if (recipientUser.email) {
+                                    sharedWith.push(recipientUser.email);
+                                }
+                            } catch (error) {
+                                console.error("Error fetching recipient user:", error);
+                            }
                         }
-                    });
+                    }
 
                     // Get shareId for this file (from shares collection)
                     const sharesSnapshot = await adminDb
@@ -311,7 +317,6 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// Helper function to format bytes
 function formatBytes(bytes: number): string {
     if (bytes === 0) return "0 B";
     const k = 1024;
