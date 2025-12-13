@@ -1704,7 +1704,10 @@ export default function MyFiles() {
                                                                 size="sm"
                                                                 variant="flat"
                                                                 className="bg-white/10"
-                                                                onPress={() => window.open(fileDetail.shareInfo!.shareUrl, "_blank")}
+                                                                onPress={() => {
+                                                                    const shareId = fileDetail.shareInfo!.shareUrl.split('/').pop();
+                                                                    window.open(`${window.location.origin}/share/${shareId}`, "_blank");
+                                                                }}
                                                             >
                                                                 <ExternalLink size={16} className="text-white" />
                                                             </Button>
@@ -1780,7 +1783,7 @@ export default function MyFiles() {
                                     className="space-y-2"
                                 >
                                     <p className="text-gray-300 text-xl">
-                                        你確定要刪除 <span className="text-white font-semibold">{fileToDelete?.name}</span> 嗎？
+                                        你確定要刪除 <span className="text-white font-semibold">{truncateFileName(fileToDelete?.name || '', 30)}</span> 嗎？
                                     </p>
                                     <p className="text-gray-400 text-base">
                                         操作無法復原，相關分享連結也將失效。
