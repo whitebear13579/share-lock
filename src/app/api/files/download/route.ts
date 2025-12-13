@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
         }
 
         const uid = decodedToken.uid;
-        const userEmail = decodedToken.email;
         const body = await request.json();
         const { fileId, shareId } = body;
 
@@ -98,7 +97,7 @@ export async function POST(request: NextRequest) {
 
         // Case 1: User is the owner
         if (isOwner) {
-            return await issueDirectDownload(fileId, fileData, shareId);
+            return await issueDirectDownload(fileId, fileData, shareId, uid, request);
         }
 
         // Case 2: Check if file is shared with user via email (account bound)
@@ -113,32 +112,28 @@ export async function POST(request: NextRequest) {
             const sharedDoc = sharedWithMeSnapshot.docs[0];
             const sharedData = sharedDoc.data();
 
+            // Only allow direct download for non-device modes
+            // Device mode requires verification through share page
             if (fileData?.shareMode === "account" || fileData?.shareMode === "public") {
                 await sharedDoc.ref.update({
                     accessCount: (sharedData.accessCount || 0) + 1,
                     lastAccessedAt: new Date(),
                 });
 
-                return await issueDirectDownload(fileId, fileData, sharedData.shareId);
+                return await issueDirectDownload(fileId, fileData, sharedData.shareId, uid, request);
+            } else if (fileData?.shareMode === "device" || fileData?.shareMode === "pin") {
+                // For device or pin mode, redirect to share page for verification
+                return NextResponse.json({
+                    success: true,
+                    requiresVerification: true,
+                    shareId: sharedData.shareId,
+                    redirectUrl: `/share/${sharedData.shareId}`,
+                    message: "This file requires device verification before download",
+                });
             }
         }
 
-        // Case 3: Check if this is a notification-based share
-        if (userEmail) {
-            const notificationSnapshot = await adminDb
-                .collection("notifications")
-                .where("fileId", "==", fileId)
-                .where("toEmail", "==", userEmail)
-                .where("type", "==", "share-invite")
-                .limit(1)
-                .get();
-
-            if (!notificationSnapshot.empty) {
-                return await issueDirectDownload(fileId, fileData, shareId);
-            }
-        }
-
-        // Case 4: For all other cases, require verification through share page
+        // Case 3: For all other cases, require verification through share page
         let foundShareId = shareId;
         if (!foundShareId) {
             const shareSnapshot = await adminDb
@@ -181,13 +176,32 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// Helper function to issue direct download
 async function issueDirectDownload(
     fileId: string,
     fileData: FirebaseFirestore.DocumentData | undefined,
-    shareId?: string
+    shareId?: string,
+    uid?: string,
+    request?: NextRequest
 ) {
     try {
+        if (uid) {
+            try {
+                await adminDb.collection("accessLogs").add({
+                    fileId: fileId,
+                    uid: uid,
+                    shareId: shareId,
+                    type: "download",
+                    at: new Date(),
+                    ip: request?.headers.get('x-forwarded-for') ||
+                        request?.headers.get('x-real-ip') ||
+                        'unknown',
+                    userAgent: request?.headers.get('user-agent') || 'unknown',
+                });
+            } catch (logError) {
+                console.error("Failed to record access log:", logError);
+            }
+        }
+
         const crypto = await import("crypto");
         const downloadToken = crypto.randomBytes(32).toString("base64url");
 
