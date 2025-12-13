@@ -116,20 +116,18 @@ export async function GET(request: NextRequest) {
         const recipients: Array<{ email: string; photoURL?: string; displayName?: string }> = [];
         for (const doc of sharedWithMeSnapshot.docs) {
             const data = doc.data();
-            if (data.ownerEmail) {
+            // ownerUid in sharedWithMe is the recipient (the person who accepted the share)
+            if (data.ownerUid) {
                 try {
-                    const userRecord = await auth().getUserByEmail(data.ownerEmail);
+                    const userRecord = await auth().getUser(data.ownerUid);
                     recipients.push({
-                        email: data.ownerEmail,
+                        email: userRecord.email || "未知",
                         photoURL: userRecord.photoURL || undefined,
                         displayName: userRecord.displayName || undefined,
                     });
                 } catch (error) {
-                    // User not found or error fetching user, just add email
-                    recipients.push({
-                        email: data.ownerEmail,
-                    });
-                    console.error("Error fetching user for sharedWithMe:", error);
+                    // User not found or error fetching user
+                    console.error("Error fetching recipient user:", error);
                 }
             }
         }
@@ -142,6 +140,22 @@ export async function GET(request: NextRequest) {
             } catch (error) {
                 console.error("Error fetching owner email:", error);
             }
+        }
+
+        // Record access log for recent files tracking
+        try {
+            await adminDb.collection("accessLogs").add({
+                fileId: fileId,
+                uid: uid,
+                type: "view",
+                at: new Date(),
+                ip: request.headers.get('x-forwarded-for') ||
+                    request.headers.get('x-real-ip') ||
+                    'unknown',
+                userAgent: request.headers.get('user-agent') || 'unknown',
+            });
+        } catch (logError) {
+            console.error("Failed to record access log:", logError);
         }
 
         return NextResponse.json({
