@@ -123,6 +123,18 @@ export async function POST(request: NextRequest) {
 
         const fileData = fileDoc.data();
 
+        // Get the original sender's info for sending response notification
+        const senderUid = shareData?.ownerUid || fileData?.ownerUid;
+        let senderEmail: string | null = null;
+        if (senderUid) {
+            try {
+                const senderUser = await auth().getUser(senderUid);
+                senderEmail = senderUser.email || null;
+            } catch (error) {
+                console.error("Error fetching sender info:", error);
+            }
+        }
+
         if (action === "accept") {
             // Create a sharedWithMe entry
             const sharedWithMeRef = adminDb.collection("sharedWithMe").doc();
@@ -159,13 +171,43 @@ export async function POST(request: NextRequest) {
                     deliveredAt: Timestamp.now(),
                 });
 
+            // Send notification to the original sender that the invitation was accepted
+            if (senderEmail) {
+                const responseNotifRef = adminDb.collection("notifications").doc();
+                await responseNotifRef.set({
+                    type: "share-accepted",
+                    toEmail: senderEmail,
+                    fromUid: uid,
+                    shareId,
+                    fileId,
+                    message: `${userRecord.displayName || userEmail} 已接受您的檔案分享邀請`,
+                    createdAt: Timestamp.now(),
+                    delivered: false,
+                });
+            }
+
             return NextResponse.json({
                 success: true,
                 message: "Share invitation accepted",
             });
         } else {
             // action === "reject"
-            // Just delete the notification
+            // Send notification to the original sender that the invitation was rejected
+            if (senderEmail) {
+                const responseNotifRef = adminDb.collection("notifications").doc();
+                await responseNotifRef.set({
+                    type: "share-rejected",
+                    toEmail: senderEmail,
+                    fromUid: uid,
+                    shareId,
+                    fileId,
+                    message: `${userRecord.displayName || userEmail} 已拒絕您的檔案分享邀請`,
+                    createdAt: Timestamp.now(),
+                    delivered: false,
+                });
+            }
+
+            // Delete the notification
             await adminDb
                 .collection("notifications")
                 .doc(notificationId)
