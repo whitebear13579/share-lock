@@ -496,6 +496,7 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
                 batch.set(notifRef, {
                     type: "share-invite",
                     toEmail: email,
+                    fromUid: user.uid,
                     shareId,
                     fileId: uploadedFileId,
                     createdAt: Timestamp.now(),
@@ -1021,7 +1022,13 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
                                                 radius="full"
                                                 isRequired={true}
                                                 // @ts-expect-error - HeroUI uses internal @internationalized/date version
-                                                value={parseDate(shareSettings.expiresAt.toISOString().split("T")[0])}
+                                                value={parseDate((() => {
+                                                    const d = shareSettings.expiresAt;
+                                                    const year = d.getFullYear();
+                                                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                                                    const day = String(d.getDate()).padStart(2, '0');
+                                                    return `${year}-${month}-${day}`;
+                                                })())}
                                                 onChange={(date: unknown) => {
                                                     if (date && typeof date === 'object' && 'year' in date && 'month' in date && 'day' in date) {
                                                         const jsDate = new Date(
@@ -1051,8 +1058,22 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
                                                         }));
                                                     }
                                                 }}
-                                                minValue={parseDate(new Date().toISOString().split("T")[0])}
-                                                maxValue={parseDate(new Date(Date.now() + MAX_DAYS * 24 * 60 * 60 * 1000).toISOString().split("T")[0])}
+                                                minValue={parseDate((() => {
+                                                    const today = new Date();
+                                                    const year = today.getFullYear();
+                                                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                                                    const day = String(today.getDate()).padStart(2, '0');
+                                                    return `${year}-${month}-${day}`;
+                                                })())}
+                                                maxValue={parseDate((() => {
+                                                    const today = new Date();
+                                                    today.setHours(0, 0, 0, 0);
+                                                    const maxDate = new Date(today.getTime() + (MAX_DAYS - 1) * 24 * 60 * 60 * 1000);
+                                                    const year = maxDate.getFullYear();
+                                                    const month = String(maxDate.getMonth() + 1).padStart(2, '0');
+                                                    const day = String(maxDate.getDate()).padStart(2, '0');
+                                                    return `${year}-${month}-${day}`;
+                                                })())}
                                                 isInvalid={!!expiresAtError}
                                                 errorMessage={expiresAtError}
                                                 popoverProps={{
