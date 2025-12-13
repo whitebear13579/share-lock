@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         // block backup-eligible authenticators, except for Apple devices
         if (backupEligible && !isAppleAuthenticator) {
             return NextResponse.json(
-                { error: "不允許使用具備份能力的驗證器（Apple 裝置除外）" },
+                { error: "不允許使用具備份能力的驗證器" },
                 { status: 400 }
             );
         }
