@@ -99,7 +99,7 @@ export default function Home() {
     }, []);
 
     // animation setup
-    useEffect(() => {
+    const handlePageEnrty = () =>{
         if (
             !logoRef.current ||
             !titleRef.current ||
@@ -159,6 +159,10 @@ export default function Home() {
             .then(() => {
                 console.log("Home Page Loaded.");
             });
+    };
+
+    useEffect(() => {
+        handlePageEnrty();
     }, []);
 
     const handlePageExit = async (targetPath?: string) => {
@@ -250,6 +254,14 @@ export default function Home() {
 
             if (link && !isNavigating) {
                 const href = link.getAttribute("href");
+
+                if ( href == "/" ){
+                    e.preventDefault();
+                    await handlePageExit("/");
+                    handlePageEnrty();
+                    return;
+                }
+
                 if (href && (href.startsWith("/") || href.startsWith("#"))) {
                     e.preventDefault();
                     isNavigating = true;
