@@ -97,10 +97,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const logout = async () => {
         isLoggingOut.current = true;
         try {
-            await deleteServerSession();
-            sessionSynced.current = false;
-            router.push("/login");
             await signOut(auth);
+            sessionSynced.current = false;
+            await deleteServerSession();
+            await new Promise(resolve => setTimeout(resolve, 30));
+            router.push("/login");
+        } catch (error) {
+            console.error("Logout failed:", error);
+            router.push("/login");
         } finally {
             setTimeout(() => {
                 isLoggingOut.current = false;
