@@ -1287,9 +1287,9 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
                                             <div className="text-white text-lg tracking-wider">
                                                 分享連結：
                                             </div>
-                                            <div className="flex gap-2 items-center">
-                                                <code className="flex-1 px-3 py-2 bg-white/10 border border-white/30 rounded-xl text-white text-sm tracking-tight h-10 flex items-center shadow-xl">
-                                                    {truncateString(shareUrl.replace(/^https?:\/\//, ''), 35)}
+                                            <div className="flex gap-2 items-center w-full">
+                                                <code className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/30 rounded-xl text-white text-sm tracking-tight h-10 flex items-center shadow-xl overflow-hidden truncate">
+                                                    {truncateString(shareUrl.replace(/^https?:\/\//, ''), 25)}
                                                 </code>
                                                 <Popover
                                                     isOpen={showUrlCopyPopover}
@@ -1339,8 +1339,8 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
                                             <div className="text-white text-lg tracking-wider">
                                                 或者，直接使用分享代碼：
                                             </div>
-                                            <div className="flex gap-2 items-center">
-                                                <code className="flex-1 px-3 py-2 bg-white/10 border border-white/30 rounded-xl text-white text-sm font-mono tracking-wider h-10 flex items-center shadow-xl">
+                                            <div className="flex gap-2 items-center w-full">
+                                                <code className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-white/30 rounded-xl text-white text-sm font-mono tracking-wider h-10 flex items-center shadow-xl overflow-hidden truncate">
                                                     {truncateString(uploadedShareId, 35)}
                                                 </code>
                                                 <Popover
