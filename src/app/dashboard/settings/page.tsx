@@ -10,7 +10,6 @@ import {
     Folder,
     House,
     LogOut,
-    Star,
     Shield,
     AlertTriangle,
     Mail,
@@ -180,6 +179,7 @@ export default function Settings() {
     const [emailPopover, setEmailPopover] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' }>({ isOpen: false, message: '', type: 'success' });
     const [passwordPopover, setPasswordPopover] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' }>({ isOpen: false, message: '', type: 'success' });
     const [verifyEmailPopover, setVerifyEmailPopover] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' }>({ isOpen: false, message: '', type: 'success' });
+    const [deleteFilesPopover, setDeleteFilesPopover] = useState<{ isOpen: boolean; message: string; type: 'success' | 'error' }>({ isOpen: false, message: '', type: 'success' });
 
     // Modal controls
     const { isOpen: isNameModalOpen, onOpen: onNameModalOpen, onOpenChange: onNameModalOpenChange } = useDisclosure();
@@ -798,14 +798,45 @@ export default function Settings() {
 
     const handleDeleteFiles = async () => {
         if (deleteConfirmText !== 'DELETE') return;
+        if (!user) return;
 
         setIsUpdating(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            const idToken = await user.getIdToken();
+            const response = await fetch('/api/files/delete-all', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${idToken}`,
+                },
+                body: JSON.stringify({ confirmText: 'DELETE' }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || '刪除檔案失敗');
+            }
+
             onDeleteModalOpenChange();
             setDeleteConfirmText("");
+
+            await loadStorageData();
+
+            setDeleteFilesPopover({
+                isOpen: true,
+                message: `成功刪除 ${data.deletedCount} 個檔案`,
+                type: 'success'
+            });
+            setTimeout(() => setDeleteFilesPopover({ isOpen: false, message: '', type: 'success' }), 3000);
         } catch (error: unknown) {
             console.error("Error deleting files:", error);
+            setDeleteFilesPopover({
+                isOpen: true,
+                message: '刪除檔案失敗：' + (error as Error).message,
+                type: 'error'
+            });
+            setTimeout(() => setDeleteFilesPopover({ isOpen: false, message: '', type: 'error' }), 3000);
         } finally {
             setIsUpdating(false);
         }
@@ -1588,30 +1619,61 @@ export default function Settings() {
                                 </CardHeader>
                                 <CardBody className="px-6 py-6">
                                     <div className="grid grid-cols-3 gap-6">
-                                        <div className="relative p-5 bg-white/8 rounded-2xl shadow-2xl custom-button-trans-override overflow-hidden flex flex-col">
-                                            <PackageX size={140} className="absolute -top-14 -left-9 text-red-400 opacity-30" style={{ mixBlendMode: 'normal' }} />
-                                            <div className="flex items-center justify-between mb-3 relative z-10">
-                                                <div className="flex items-center gap-3 pl-2">
-                                                    <span className="text-red-200 text-xl tracking-widest font-semibold">
-                                                        刪除所有檔案
-                                                    </span>
+                                        <Popover
+                                            isOpen={deleteFilesPopover.isOpen}
+                                            placement="top"
+                                            showArrow={true}
+                                            onOpenChange={(open) => setDeleteFilesPopover({ ...deleteFilesPopover, isOpen: open })}
+                                            offset={8}
+                                            classNames={{
+                                                base: [
+                                                    deleteFilesPopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                ],
+                                                content: [
+                                                    deleteFilesPopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                    "border-2",
+                                                ].join(" "),
+                                            }}
+                                        >
+                                            <div className="relative p-5 bg-white/8 rounded-2xl shadow-2xl custom-button-trans-override overflow-hidden flex flex-col">
+                                                <PackageX size={140} className="absolute -top-14 -left-9 text-red-400 opacity-30" style={{ mixBlendMode: 'normal' }} />
+                                                <div className="flex items-center justify-between mb-3 relative z-10">
+                                                    <div className="flex items-center gap-3 pl-2">
+                                                        <span className="text-red-200 text-xl tracking-widest font-semibold">
+                                                            刪除所有檔案
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-white font-medium flex-wrap text-justify text-base mb-4 pl-2 relative z-10 flex-1">永久刪除所有已上傳的檔案，此操作無法復原。</p>
+                                                <div className="flex justify-end relative z-10">
+                                                    <PopoverTrigger>
+                                                        <CustomButton
+                                                            variant="blur"
+                                                            size="md"
+                                                            onPress={onDeleteModalOpen}
+                                                            className="text-red-400  border-red-500/50 border-2 text-base"
+                                                            startContent={
+                                                                <Trash2 size={18} className="flex-shrink-0" />
+                                                            }
+                                                        >
+                                                            刪除
+                                                        </CustomButton>
+                                                    </PopoverTrigger>
                                                 </div>
                                             </div>
-                                            <p className="text-white font-medium flex-wrap text-justify text-base mb-4 pl-2 relative z-10 flex-1">永久刪除所有已上傳的檔案，此操作無法復原。</p>
-                                            <div className="flex justify-end relative z-10">
-                                                <CustomButton
-                                                    variant="blur"
-                                                    size="md"
-                                                    onPress={onDeleteModalOpen}
-                                                    className="text-red-400  border-red-500/50 border-2 text-base"
-                                                    startContent={
-                                                        <Trash2 size={18} className="flex-shrink-0" />
-                                                    }
-                                                >
-                                                    刪除
-                                                </CustomButton>
-                                            </div>
-                                        </div>
+                                            <PopoverContent>
+                                                <div className="px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        {deleteFilesPopover.type === 'success' ? (
+                                                            <Check size={20} className="text-white" />
+                                                        ) : (
+                                                            <AlertTriangle size={20} className="text-white" />
+                                                        )}
+                                                        <span className="text-base text-white font-medium">{deleteFilesPopover.message}</span>
+                                                    </div>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
                                         <div className="relative p-5 bg-white/8 rounded-2xl shadow-2xl custom-button-trans-override overflow-hidden flex flex-col">
                                             <UserRoundXIcon size={140} className="absolute -top-14 -left-9 text-red-400 opacity-30" style={{ mixBlendMode: 'normal' }} />
                                             <div className="flex items-center justify-between mb-3 relative z-10">
@@ -2241,30 +2303,61 @@ export default function Settings() {
                                 </CardHeader>
                                 <CardBody className="px-4 py-4">
                                     <div className="space-y-3">
-                                        <div className="relative p-5 bg-white/8 rounded-2xl shadow-2xl custom-button-trans-override overflow-hidden flex flex-col">
-                                            <PackageX size={100} className="absolute -top-8 -left-6 text-red-400 opacity-30" style={{ mixBlendMode: 'normal' }} />
-                                            <div className="flex items-center justify-between mb-3 relative z-10">
-                                                <div className="flex items-center gap-3 pl-2">
-                                                    <span className="text-red-200 text-base tracking-widest font-semibold">
-                                                        刪除所有檔案
-                                                    </span>
+                                        <Popover
+                                            isOpen={deleteFilesPopover.isOpen}
+                                            placement="top"
+                                            showArrow={true}
+                                            onOpenChange={(open) => setDeleteFilesPopover({ ...deleteFilesPopover, isOpen: open })}
+                                            offset={8}
+                                            classNames={{
+                                                base: [
+                                                    deleteFilesPopover.type === 'success' ? 'before:bg-emerald-700' : 'before:bg-rose-800',
+                                                ],
+                                                content: [
+                                                    deleteFilesPopover.type === 'success' ? 'bg-emerald-600 border-emerald-700' : 'bg-rose-500 border-rose-800',
+                                                    "border-2",
+                                                ].join(" "),
+                                            }}
+                                        >
+                                            <div className="relative p-5 bg-white/8 rounded-2xl shadow-2xl custom-button-trans-override overflow-hidden flex flex-col">
+                                                <PackageX size={100} className="absolute -top-8 -left-6 text-red-400 opacity-30" style={{ mixBlendMode: 'normal' }} />
+                                                <div className="flex items-center justify-between mb-3 relative z-10">
+                                                    <div className="flex items-center gap-3 pl-2">
+                                                        <span className="text-red-200 text-base tracking-widest font-semibold">
+                                                            刪除所有檔案
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-white font-medium flex-wrap text-justify text-sm mb-4 pl-2 relative z-10 flex-1">永久刪除所有已上傳的檔案，此操作無法復原。</p>
+                                                <div className="flex justify-end relative z-10">
+                                                    <PopoverTrigger>
+                                                        <CustomButton
+                                                            variant="blur"
+                                                            size="md"
+                                                            onPress={onDeleteModalOpen}
+                                                            className="text-red-400 border-red-500/50 border-2 text-base"
+                                                            startContent={
+                                                                <Trash2 size={18} className="flex-shrink-0" />
+                                                            }
+                                                        >
+                                                            刪除
+                                                        </CustomButton>
+                                                    </PopoverTrigger>
                                                 </div>
                                             </div>
-                                            <p className="text-white font-medium flex-wrap text-justify text-sm mb-4 pl-2 relative z-10 flex-1">永久刪除所有已上傳的檔案，此操作無法復原。</p>
-                                            <div className="flex justify-end relative z-10">
-                                                <CustomButton
-                                                    variant="blur"
-                                                    size="md"
-                                                    onPress={onDeleteModalOpen}
-                                                    className="text-red-400 border-red-500/50 border-2 text-base"
-                                                    startContent={
-                                                        <Trash2 size={18} className="flex-shrink-0" />
-                                                    }
-                                                >
-                                                    刪除
-                                                </CustomButton>
-                                            </div>
-                                        </div>
+                                            <PopoverContent>
+                                                <div className="px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        {deleteFilesPopover.type === 'success' ? (
+                                                            <Check size={20} className="text-white" />
+                                                        ) : (
+                                                            <AlertTriangle size={20} className="text-white" />
+                                                        )}
+                                                        <span className="text-base text-white font-medium">{deleteFilesPopover.message}</span>
+                                                    </div>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
                                         <div className="relative p-5 bg-white/8 rounded-2xl shadow-2xl custom-button-trans-override overflow-hidden flex flex-col">
                                             <UserRoundXIcon size={100} className="absolute -top-8 -left-6 text-red-400 opacity-30" style={{ mixBlendMode: 'normal' }} />
                                             <div className="flex items-center justify-between mb-3 relative z-10">
