@@ -34,7 +34,8 @@ export default function Home() {
     const [pdfPopover, setPdfPopover] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
 
     const handlePdfDownload = () => {
-        setPdfPopover({ isOpen: true, message: '簡報還沒做呢，親' });
+        window.open('https://www.dropbox.com/scl/fi/clnc0cysuibzohcjga8ty/2025.pdf?rlkey=5v620pt73uyapr9rxoyzjnc4u&st=79wpcawi&dl=1', '_blank');
+        setPdfPopover({ isOpen: true, message: '簡報已下載' });
         setTimeout(() => setPdfPopover({ isOpen: false, message: '' }), 3000);
     };
 
@@ -99,7 +100,7 @@ export default function Home() {
     }, []);
 
     // animation setup
-    const handlePageEnrty = () =>{
+    const handlePageEnrty = () => {
         if (
             !logoRef.current ||
             !titleRef.current ||
@@ -255,7 +256,7 @@ export default function Home() {
             if (link && !isNavigating) {
                 const href = link.getAttribute("href");
 
-                if ( href == "/" ){
+                if (href == "/") {
                     e.preventDefault();
                     await handlePageExit("/");
                     handlePageEnrty();
