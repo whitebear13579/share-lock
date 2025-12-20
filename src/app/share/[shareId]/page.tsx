@@ -6,8 +6,9 @@ import { Timestamp } from "firebase/firestore";
 import { gsap } from "gsap";
 import CustomButton from "@/components/button";
 import CustomInput from "@/components/input";
+import CustomTabs from "@/components/tabs";
 import PageTransition from "@/components/pageTransition";
-import { Spinner, InputOtp, Chip } from "@heroui/react";
+import { Spinner, InputOtp, Chip, Navbar, NavbarContent, NavbarBrand, NavbarMenuToggle, Avatar } from "@heroui/react";
 import Link from "next/link";
 import {
     checkWebAuthnSupport,
@@ -15,7 +16,8 @@ import {
     registerAuthenticator,
     verifyAuthenticator
 } from "@/utils/webauthn";
-import { CircleX, CircleAlert, ArrowLeft, Download, Lock, LockOpen, InfoIcon, Check } from "lucide-react";
+import { CircleX, CircleAlert, ArrowLeft, Download, Lock, LockOpen, InfoIcon, Check, LogOut } from "lucide-react";
+import { NAVIGATION_ROUTES } from "@/components/dashboardNavigation";
 
 type ShareMode = "device" | "account" | "pin" | "public";
 
@@ -78,8 +80,13 @@ export default function SharePage() {
     const [hasCompletedLoading, setHasCompletedLoading] = useState(false);
     const [loadError, setLoadError] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
     const loadingRef = useRef<HTMLDivElement>(null);
+    const mainContentRef = useRef<HTMLDivElement>(null);
+    const footerRef = useRef<HTMLDivElement>(null);
+    const fakeTabRef = useRef<HTMLDivElement>(null);
+    const fakeBgRef = useRef<HTMLDivElement>(null);
     const formContainerRef = useRef<HTMLDivElement>(null);
     const errorContainerRef = useRef<HTMLDivElement>(null);
     const errorBoxRef = useRef<HTMLDivElement>(null);
@@ -96,6 +103,17 @@ export default function SharePage() {
     const setErrorWithAnimation = useCallback((message: string) => {
         setError(message);
         setErrorKey(prev => prev + 1);
+    }, []);
+
+    useEffect(() => {
+        const checkScreenSize = () => {
+            setIsMobile(window.innerWidth < 1536);
+        };
+
+        checkScreenSize();
+        window.addEventListener('resize', checkScreenSize);
+
+        return () => window.removeEventListener('resize', checkScreenSize);
     }, []);
 
     useEffect(() => {
@@ -950,7 +968,9 @@ export default function SharePage() {
         }
     }, [error, errorKey, hasCompletedLoading, isLoading, loadError, animateErrorBox, hideErrorBox]);
 
-    const handlePageExit = () => {
+    const handlePageExit = useCallback((targetPath?: string) => {
+        const isDashboardTarget = targetPath?.startsWith("/dashboard");
+
         return new Promise<void>((resolve) => {
             let element: HTMLDivElement | null = null;
 
@@ -978,37 +998,49 @@ export default function SharePage() {
 
             gsap.killTweensOf(element);
 
-            let animationCompleted = false;
+            const tl = gsap.timeline({
+                onComplete: resolve,
+            });
 
-            const timeout = setTimeout(() => {
-                if (!animationCompleted) {
-                    animationCompleted = true;
-                    resolve();
-                }
-            }, 450);
-
-            gsap.to(element, {
+            tl.to(element, {
                 y: 100,
                 opacity: 0,
                 duration: 0.4,
                 ease: "power2.in",
-                onComplete: () => {
-                    if (!animationCompleted) {
-                        animationCompleted = true;
-                        clearTimeout(timeout);
-                        resolve();
-                    }
-                },
-                onInterrupt: () => {
-                    if (!animationCompleted) {
-                        animationCompleted = true;
-                        clearTimeout(timeout);
-                        resolve();
+            });
+
+            if (isDashboardTarget && user) {
+                if (fakeTabRef.current && fakeBgRef.current) {
+                    tl.set([fakeTabRef.current, fakeBgRef.current], {
+                        opacity: 1,
+                    });
+
+                    if (typeof window !== "undefined") {
+                        sessionStorage.setItem("pageTransition", "fromHome");
                     }
                 }
-            });
+
+                tl.to(
+                    mainContentRef.current,
+                    {
+                        y: -((window.innerHeight) + 50),
+                        duration: 0.5,
+                        ease: "power2.inOut",
+                    },
+                    "+=0"
+                )
+                    .to(
+                        footerRef.current,
+                        {
+                            y: 200,
+                            duration: 0.4,
+                            ease: "power2.in",
+                        },
+                        "-=0.4"
+                    );
+            }
         });
-    };
+    }, [user]);
 
     useEffect(() => {
         let isNavigating = false;
@@ -1071,7 +1103,7 @@ export default function SharePage() {
                     isNavigating = true;
 
                     try {
-                        await handlePageExit();
+                        await handlePageExit(originalHref);
                         router.push(originalHref);
                     } catch (error) {
                         console.error("transition failed!!!:", error);
@@ -1092,12 +1124,12 @@ export default function SharePage() {
         return () => {
             document.removeEventListener("click", handleClick, true);
         };
-    }, [router]);
+    }, [router, user, handlePageExit]);
 
     return (
         <PageTransition>
-            <div className="flex flex-col min-h-screen max-h-screen bg-neutral-800 overflow-hidden">
-                <div className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
+            <div className="flex flex-col min-h-screen max-h-screen bg-neutral-800 overflow-hidden relative">
+                <div ref={mainContentRef} className="bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 relative z-20 overflow-hidden flex flex-1 flex-col items-center justify-center bg-cover bg-center bg-no-repeat border-t-0 rounded-b-5xl w-full shadow-2xl border-b-2 border-b-gray-500 tracking-wider">
                     {/* Loading container */}
                     <div
                         ref={loadingRef}
@@ -1434,7 +1466,7 @@ export default function SharePage() {
                         </div>
                     </div>
                 </div>
-                <div className="px-6 py-5 flex w-full flex-shrink-0 justify-center md:justify-start">
+                <div ref={footerRef} className="px-6 py-5 flex w-full flex-shrink-0 justify-center md:justify-start z-20">
                     <p className="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">
                         © 2025{" "}
                         <span className="text-blue-500 font-bold">
@@ -1449,6 +1481,79 @@ export default function SharePage() {
                         &nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.
                     </p>
                 </div>
+            </div>
+
+            {/* Fake Background for Transition */}
+            <div
+                ref={fakeBgRef}
+                className="fixed inset-0 bg-linear-205 from-slate-700 to-neutral-800 to-55% opacity-0 pointer-events-none z-[5]"
+            />
+
+            {/* Fake Tab Navigation for Transition */}
+            <div
+                ref={fakeTabRef}
+                className="fixed inset-0 z-10 opacity-0 pointer-events-none"
+            >
+                {!isMobile && (
+                    <div className="absolute top-6 right-6 flex space-x-3">
+                        <CustomTabs
+                            tabs={NAVIGATION_ROUTES}
+                            defaultTab="dashboard"
+                            layoutId="fakeTabNavigation"
+                        />
+                        <CustomButton
+                            variant="blur"
+                            size="lg"
+                            radius="full"
+                            startContent={<LogOut size={18} className="text-gray-200" />}
+                            className="text-base hover:bg-white/20 text-gray-200"
+                        >
+                            登出
+                        </CustomButton>
+                    </div>
+                )}
+
+                {isMobile && (
+                    <div className="absolute top-0 left-0 right-0">
+                        <Navbar
+                            className="bg-black/40 transition-all"
+                            classNames={{
+                                base: "border-b-1.5 border-white/70",
+                                wrapper: "px-4 sm:px-6",
+                                brand: "text-white",
+                                content: "text-white",
+                                item: "text-white",
+                                toggle: "text-white",
+                                menu: "bg-white/10",
+                            }}
+                        >
+                            <NavbarContent>
+                                <NavbarMenuToggle
+                                    aria-label="開啟選單"
+                                    className="text-white"
+                                />
+                            </NavbarContent>
+
+                            <NavbarContent justify="center">
+                                <NavbarBrand>
+                                    <p className="font-bold text-xl text-white">資訊主頁</p>
+                                </NavbarBrand>
+                            </NavbarContent>
+
+                            <NavbarContent justify="end">
+                                <Avatar
+                                    isBordered
+                                    as="button"
+                                    className="transition-transform"
+                                    color="success"
+                                    name={user?.displayName || "User"}
+                                    size="sm"
+                                    src={user?.photoURL || "/undefined.png"}
+                                />
+                            </NavbarContent>
+                        </Navbar>
+                    </div>
+                )}
             </div>
         </PageTransition>
     );
