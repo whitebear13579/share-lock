@@ -193,6 +193,10 @@ export default function Login() {
                     case "auth/user-not-found":
                         setEmailError("找不到此電子郵件帳號");
                         break;
+                    case "auth/too-many-requests":
+                        setError("受到速率限制，請稍後再試");
+                        break;
+
                     case "auth/invalid-email":
                         setEmailError("電子郵件格式不正確");
                         break;
