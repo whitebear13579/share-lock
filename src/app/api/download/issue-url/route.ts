@@ -143,6 +143,36 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        if (shareData.shareMode === "pin") {
+            if (!sessionToken) {
+                return NextResponse.json(
+                    { error: "PIN verification required - sessionToken is missing" },
+                    { status: 401 }
+                );
+            }
+
+            try {
+                const jwtSecret = process.env.JWT_SECRET || "your-secret-key";
+                const decoded = jwt.verify(sessionToken, jwtSecret) as {
+                    shareId: string;
+                    fileId: string;
+                    mode: string;
+                };
+
+                if (decoded.shareId !== shareId || decoded.fileId !== fileId || decoded.mode !== "pin") {
+                    return NextResponse.json(
+                        { error: "sessionToken invalid" },
+                        { status: 401 }
+                    );
+                }
+            } catch {
+                return NextResponse.json(
+                    { error: "PIN session has expired, please verify PIN again" },
+                    { status: 401 }
+                );
+            }
+        }
+
         // For logged-in users (non-account mode): Create sharedWithMe record if not exists
         // Account mode creates record in bind-account API, so skip it here
         if (userId && shareData.shareMode !== "account") {

@@ -15,7 +15,6 @@ import {
     registerAuthenticator,
     verifyAuthenticator
 } from "@/utils/webauthn";
-import { hashPin } from "@/utils/crypto";
 import { CircleX, CircleAlert, ArrowLeft, Download, Lock, LockOpen, InfoIcon, Check } from "lucide-react";
 
 type ShareMode = "device" | "account" | "pin" | "public";
@@ -48,7 +47,6 @@ interface FileData {
     remainingDownloads: number;
     maxDownloads: number;
     shareMode: ShareMode;
-    pinHash?: string;
     revoked: boolean;
     ownerUid: string;
     allowedDevices: DeviceInfo[];
@@ -62,6 +60,7 @@ export default function SharePage() {
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
+    const [errorKey, setErrorKey] = useState(0); // Used to force re-render on same error message
     const [displayedError, setDisplayedError] = useState("");
     const [shareData, setShareData] = useState<ShareData | null>(null);
     const [fileData, setFileData] = useState<FileData | null>(null);
@@ -94,14 +93,19 @@ export default function SharePage() {
     const chipRef = useRef<HTMLDivElement>(null);
     const isPageEntering = useRef(false);
 
+    const setErrorWithAnimation = useCallback((message: string) => {
+        setError(message);
+        setErrorKey(prev => prev + 1);
+    }, []);
+
     useEffect(() => {
         const support = checkWebAuthnSupport();
         setWebAuthnSupported(support.supported);
 
         if (fileData?.shareMode === "device" && !support.supported) {
-            setError(support.error || "此裝置不支援 WebAuthn");
+            setErrorWithAnimation(support.error || "此裝置不支援 WebAuthn");
         }
-    }, [fileData]);
+    }, [fileData, setErrorWithAnimation]);
 
     const formatBytes = (bytes: number): string => {
         if (bytes === 0) return "0 Bytes";
@@ -339,7 +343,6 @@ export default function SharePage() {
                     remainingDownloads: data.fileData.remainingDownloads ?? 0,
                     maxDownloads: data.fileData.maxDownloads ?? 0,
                     shareMode: data.fileData.shareMode || "public",
-                    pinHash: data.fileData.pinHash,
                     revoked: data.fileData.revoked || false,
                     ownerUid: data.fileData.ownerUid,
                     allowedDevices: data.fileData.allowedDevices || [],
@@ -406,7 +409,6 @@ export default function SharePage() {
         if (!shareData || !fileData) return;
 
         setIsVerifying(true);
-        setError("");
 
         try {
             let verificationSuccess = false;
@@ -414,14 +416,14 @@ export default function SharePage() {
             if (fileData.shareMode === "account") {
 
                 if (!user) {
-                    setError("請先登入");
+                    setErrorWithAnimation("請先登入");
                     setIsVerifying(false);
                     return;
                 }
 
                 if (shareData.boundUid) {
                     if (shareData.boundUid !== user.uid) {
-                        setError("此檔案已綁定至其他帳號");
+                        setErrorWithAnimation("此檔案已綁定至其他帳號");
                         setIsVerifying(false);
                         return;
                     }
@@ -441,7 +443,7 @@ export default function SharePage() {
                     const bindData = await bindResponse.json();
 
                     if (!bindResponse.ok) {
-                        setError(bindData.error === "already bound to another account"
+                        setErrorWithAnimation(bindData.error === "already bound to another account"
                             ? "此檔案已綁定至其他帳號"
                             : "綁定失敗，請重試");
                         setIsVerifying(false);
@@ -453,7 +455,7 @@ export default function SharePage() {
             } else if (fileData.shareMode === "device") {
                 if (fileData.allowedDevices.length === 0) {
                     if (!user) {
-                        setError("綁定裝置前請先登入");
+                        setErrorWithAnimation("綁定裝置前請先登入");
                         setNeedsAuth(true);
                         setIsVerifying(false);
                         return;
@@ -461,14 +463,14 @@ export default function SharePage() {
 
                     const support = checkWebAuthnSupport();
                     if (!support.supported) {
-                        setError(support.error || "很抱歉，此裝置不支援 WebAuthn");
+                        setErrorWithAnimation(support.error || "很抱歉，此裝置不支援 WebAuthn");
                         setIsVerifying(false);
                         return;
                     }
 
                     const hasPlatform = await checkPlatformAuthenticatorAvailable();
                     if (!hasPlatform) {
-                        setError("此裝置沒有內建認證器，系統無法認證");
+                        setErrorWithAnimation("此裝置沒有內建認證器，系統無法認證");
                         setIsVerifying(false);
                         return;
                     }
@@ -477,14 +479,14 @@ export default function SharePage() {
 
                     if (!result.success) {
                         console.error("webauthn register failed:", result.error);
-                        setError(result.error || "裝置綁定失敗");
+                        setErrorWithAnimation(result.error || "裝置綁定失敗");
                         setIsVerifying(false);
                         return;
                     }
                     verificationSuccess = true;
                 } else {
                     if (!user) {
-                        setError("請先登入");
+                        setErrorWithAnimation("請先登入");
                         setIsVerifying(false);
                         return;
                     }
@@ -493,7 +495,7 @@ export default function SharePage() {
 
                     if (!result.success || !result.verified) {
                         console.error("webauthn verify failed:", result.error);
-                        setError(result.error || "未通過裝置驗證");
+                        setErrorWithAnimation(result.error || "未通過裝置驗證");
                         setIsVerifying(false);
                         return;
                     }
@@ -506,16 +508,32 @@ export default function SharePage() {
             } else if (fileData.shareMode === "pin") {
 
                 if (!pinInput || pinInput.length !== 6) {
-                    setError("請輸入 6 位數 PIN 碼");
+                    setErrorWithAnimation("請輸入 6 位數 PIN 碼");
                     setIsVerifying(false);
                     return;
                 }
 
-                const inputHash = hashPin(pinInput);
-                if (inputHash !== fileData.pinHash) {
-                    setError("PIN 碼錯誤");
+                const verifyResponse = await fetch("/api/share/verify-pin", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        shareId,
+                        pin: pinInput,
+                    }),
+                });
+
+                const verifyData = await verifyResponse.json();
+
+                if (!verifyResponse.ok) {
+                    setErrorWithAnimation(verifyData.error || "PIN 碼驗證失敗");
                     setIsVerifying(false);
                     return;
+                }
+
+                if (verifyData.sessionToken) {
+                    setSessionToken(verifyData.sessionToken);
                 }
                 verificationSuccess = true;
             } else {
@@ -524,12 +542,13 @@ export default function SharePage() {
             }
 
             if (verificationSuccess) {
+                setError("");
                 setIsVerifying(false);
                 await animateVerificationTransition();
             }
         } catch (err) {
             console.error("auth failed, please try again later:", err);
-            setError("驗證失敗，請重試");
+            setErrorWithAnimation("驗證失敗，請重試");
             setIsVerifying(false);
         }
     };
@@ -538,11 +557,9 @@ export default function SharePage() {
         if (!fileData || !shareData) return;
 
         setIsDownloading(true);
-        setError("");
-
         try {
             if (!verified) {
-                setError("請先完成驗證");
+                setErrorWithAnimation("請先完成驗證");
                 setIsDownloading(false);
                 return;
             }
@@ -550,14 +567,20 @@ export default function SharePage() {
             if (fileData.shareMode === "account" && user) {
 
                 if (shareData.boundUid && shareData.boundUid !== user.uid) {
-                    setError("此檔案已綁定至其他帳號");
+                    setErrorWithAnimation("此檔案已綁定至其他帳號");
                     setIsDownloading(false);
                     return;
                 }
             }
 
             if (fileData.shareMode === "device" && !sessionToken) {
-                setError("請重新進行裝置驗證");
+                setErrorWithAnimation("請重新進行裝置驗證");
+                setIsDownloading(false);
+                return;
+            }
+
+            if (fileData.shareMode === "pin" && !sessionToken) {
+                setErrorWithAnimation("請重新輸入 PIN 碼驗證");
                 setIsDownloading(false);
                 return;
             }
@@ -565,13 +588,13 @@ export default function SharePage() {
             const now = Date.now();
             const expiresAt = fileData.expiresAt.toDate().getTime();
             if (now > expiresAt) {
-                setError("此分享已過期");
+                setErrorWithAnimation("此分享已過期");
                 setIsDownloading(false);
                 return;
             }
 
             if (fileData.remainingDownloads <= 0) {
-                setError("下載次數已達上限");
+                setErrorWithAnimation("下載次數已達上限");
                 setIsDownloading(false);
                 return;
             }
@@ -581,8 +604,7 @@ export default function SharePage() {
                 shareId,
             };
 
-            // device mode needs sessionToken
-            if (fileData.shareMode === "device" && sessionToken) {
+            if ((fileData.shareMode === "device" || fileData.shareMode === "pin") && sessionToken) {
                 requestBody.sessionToken = sessionToken;
             }
 
@@ -596,8 +618,8 @@ export default function SharePage() {
                 try {
                     const idToken = await user.getIdToken();
                     headers["Authorization"] = `Bearer ${idToken}`;
-                } catch {
-                    
+                } catch (err) {
+                    console.error("Failed to get ID token:", err);
                 }
             }
 
@@ -641,24 +663,23 @@ export default function SharePage() {
             setIsDownloading(false);
         } catch (err) {
             console.error("download failed:", err);
-            setError(err instanceof Error ? err.message : "下載失敗，請重試");
+            setErrorWithAnimation(err instanceof Error ? err.message : "下載失敗，請重試");
             setIsDownloading(false);
         }
     };
 
-    const animateErrorBox = useCallback(() => {
+    const animateErrorBox = useCallback((errorMessage: string) => {
         if (!errorBoxRef.current || !formContainerRef.current) return;
 
         gsap.killTweensOf(formContainerRef.current);
+        gsap.killTweensOf(errorBoxRef.current);
 
         const currentOpacity = gsap.getProperty(errorBoxRef.current, "opacity") as number;
-        const currentHeight = gsap.getProperty(errorBoxRef.current, "height") as number;
-        const isCurrentlyVisible = currentOpacity > 0 && currentHeight > 0;
+        const computedDisplay = getComputedStyle(errorBoxRef.current).display;
+        const isCurrentlyVisible = currentOpacity > 0.5 && computedDisplay !== "none";
 
         if (isCurrentlyVisible) {
-            gsap.killTweensOf(errorBoxRef.current);
-
-            setDisplayedError(error);
+            setDisplayedError(errorMessage);
 
             const tl = gsap.timeline();
             tl.to(errorBoxRef.current, {
@@ -675,9 +696,6 @@ export default function SharePage() {
                 ease: "back.out(1.7)",
             });
         } else {
-            gsap.killTweensOf(errorBoxRef.current);
-            gsap.killTweensOf(formContainerRef.current);
-
             const currentContainerHeight = formContainerRef.current.offsetHeight;
 
             gsap.set(errorBoxRef.current, {
@@ -702,7 +720,7 @@ export default function SharePage() {
                 height: currentContainerHeight,
             });
 
-            setDisplayedError(error);
+            setDisplayedError(errorMessage);
 
             const tl = gsap.timeline({
                 onComplete: () => {
@@ -732,7 +750,7 @@ export default function SharePage() {
                     ease: "elastic.out(1, 0.5)",
                 }, 0.1);
         }
-    }, [error]);
+    }, []);
 
     const hideErrorBox = useCallback(() => {
         if (!errorBoxRef.current || !formContainerRef.current) return;
@@ -926,11 +944,11 @@ export default function SharePage() {
         }
 
         if (error && error.trim() && errorBoxRef.current) {
-            animateErrorBox();
+            animateErrorBox(error);
         } else if ((!error || !error.trim()) && errorBoxRef.current) {
             hideErrorBox();
         }
-    }, [error, hasCompletedLoading, isLoading, loadError, animateErrorBox, hideErrorBox]);
+    }, [error, errorKey, hasCompletedLoading, isLoading, loadError, animateErrorBox, hideErrorBox]);
 
     const handlePageExit = () => {
         return new Promise<void>((resolve) => {

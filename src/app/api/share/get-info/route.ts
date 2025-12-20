@@ -88,7 +88,6 @@ export async function POST(request: NextRequest) {
         }
 
         const shareMode = shareData.shareMode || fileData.shareMode || "public";
-        const pinHash = shareData.pinHash || fileData.pinHash;
 
         // Record access log for view count tracking
         try {
@@ -126,7 +125,6 @@ export async function POST(request: NextRequest) {
                 remainingDownloads: remainingDownloads,
                 maxDownloads: maxDownloads,
                 shareMode: shareMode,
-                pinHash: pinHash,
                 revoked: shareData.revoked || false,
                 allowedDevices: fileData.allowedDevices || [],
                 ownerUid: fileData.ownerUid,
