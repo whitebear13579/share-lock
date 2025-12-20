@@ -12,11 +12,11 @@ import {
     collection,
     doc,
     setDoc,
-    getDoc,
     Timestamp,
     writeBatch,
     increment,
 } from "firebase/firestore";
+import { auth } from "@/utils/firebase";
 import {
     CustomModal,
     CustomModalContent,
@@ -72,7 +72,6 @@ interface Props {
     };
 }
 
-const STORAGE_QUOTA_BYTES = 1024 * 1024 * 1024; // 1GB
 const MAX_DAYS = 14;
 const MAX_RECIPIENTS = 10;
 
@@ -192,27 +191,73 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
         lastProgressRef.current = 0;
     };
 
-    const checkUserQuota = async (
-        requiredBytes: number
-    ): Promise<boolean> => {
-        if (!user) return false;
+    const validateUploadWithBackend = async (
+        fileSize: number
+    ): Promise<{ allowed: boolean; validationToken?: string; message?: string }> => {
+        if (!user) return { allowed: false, message: "請先登入" };
 
         try {
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            const usedBytes = userDoc.data()?.storageQuotaUsed || 0;
-            const available = STORAGE_QUOTA_BYTES - usedBytes;
-
-            if (requiredBytes > available) {
-                setError(
-                    `您的可用儲存空間不足`
-                );
-                return false;
+            const idToken = await auth.currentUser?.getIdToken();
+            if (!idToken) {
+                return { allowed: false, message: "無法驗證身分，請重新登入" };
             }
-            return true;
+
+            const response = await fetch("/api/storage/validate-upload", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${idToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ fileSize }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { allowed: false, message: data.error || "驗證失敗" };
+            }
+
+            if (!data.allowed) {
+                return { allowed: false, message: data.message || "儲存空間不足" };
+            }
+
+            return { allowed: true, validationToken: data.validationToken };
         } catch (err) {
-            console.error("check user quota failed:", err);
-            setError("無法檢查您的剩餘空間，請稍後再試");
-            return false;
+            console.error("Backend validation failed:", err);
+            return { allowed: false, message: "無法驗證儲存空間，請稍後再試" };
+        }
+    };
+
+    const confirmUploadWithBackend = async (
+        validationToken: string,
+        storagePath: string,
+        actualSize: number
+    ): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const idToken = await auth.currentUser?.getIdToken();
+            if (!idToken) {
+                return { success: false, error: "無法驗證身分" };
+            }
+
+            const response = await fetch("/api/storage/confirm-upload", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${idToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ validationToken, storagePath, actualSize }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                return { success: false, error: data.error || "確認上傳失敗" };
+            }
+
+            return { success: true };
+        } catch (err) {
+            console.error("Confirm upload failed:", err);
+            return { success: false, error: "確認上傳時發生錯誤" };
         }
     };
 
@@ -285,16 +330,22 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
     const handleUpload = async () => {
         if (!user || files.length === 0) return;
 
-        const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
-        const canUpload = await checkUserQuota(totalBytes);
-        if (!canUpload) return;
+        const file = files[0];
+        const totalBytes = file.size;
+
+        const validation = await validateUploadWithBackend(totalBytes);
+        if (!validation.allowed) {
+            setError(validation.message || "儲存空間不足");
+            return;
+        }
+
+        const validationToken = validation.validationToken!;
 
         setIsUploading(true);
         setStep("uploading");
         setError("");
 
         try {
-            const file = files[0];
             const storagePath = `user_uploads/${user.uid}/${Date.now()}_${file.name}`;
             const storageRef = ref(storage, storagePath);
 
@@ -316,7 +367,18 @@ export default function UploadFiles({ isOpen, onClose, onSuccess, existingFile }
                     setIsUploading(false);
                 },
                 async () => {
-                    // create firestore related file metadata
+                    const confirmation = await confirmUploadWithBackend(
+                        validationToken,
+                        storagePath,
+                        file.size
+                    );
+
+                    if (!confirmation.success) {
+                        setError(confirmation.error || "確認上傳失敗，請重試");
+                        setIsUploading(false);
+                        return;
+                    }
+
                     const downloadURL = await getDownloadURL(
                         uploadTask.snapshot.ref
                     );
