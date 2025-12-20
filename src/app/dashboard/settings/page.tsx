@@ -594,9 +594,16 @@ export default function Settings() {
     const handleUpdateDisplayName = async () => {
         if (!user || !displayName.trim()) return;
 
+        const trimmedName = displayName.trim();
+        if (trimmedName.length > 20) {
+            setNamePopover({ isOpen: true, message: '使用者名稱不能超過 20 個字元', type: 'error' });
+            setTimeout(() => setNamePopover({ isOpen: false, message: '', type: 'error' }), 3000);
+            return;
+        }
+
         setIsUpdating(true);
         try {
-            await updateProfile(user, { displayName: displayName.trim() });
+            await updateProfile(user, { displayName: trimmedName });
             setNamePopover({ isOpen: true, message: '使用者名稱已更新！', type: 'success' });
             setTimeout(() => setNamePopover({ isOpen: false, message: '', type: 'success' }), 3000);
             onNameModalOpenChange();
