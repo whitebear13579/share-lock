@@ -1,5 +1,5 @@
 "use client";
-import { FileText, LogIn, SendHorizonal, Upload, LogOut, Check, SmileIcon } from "lucide-react";
+import { FileText, LogIn, SendHorizonal, Upload, LogOut, CheckIcon } from "lucide-react";
 import NextImage from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
@@ -34,7 +34,7 @@ export default function Home() {
     const [pdfPopover, setPdfPopover] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
 
     const handlePdfDownload = () => {
-        window.open('https://www.dropbox.com/scl/fi/clnc0cysuibzohcjga8ty/2025.pdf?rlkey=5v620pt73uyapr9rxoyzjnc4u&st=79wpcawi&dl=1', '_blank');
+        window.open('https://pdfdl.sharelock.qzz.io/', '_blank');
         setPdfPopover({ isOpen: true, message: '簡報已下載' });
         setTimeout(() => setPdfPopover({ isOpen: false, message: '' }), 3000);
     };
@@ -326,7 +326,7 @@ export default function Home() {
                                 <PopoverContent>
                                     <div className="px-3 py-2">
                                         <div className="flex items-center gap-2">
-                                            <SmileIcon size={20} className="text-white" />
+                                            <CheckIcon size={20} className="text-white" />
                                             <span className="text-base text-white font-medium">{pdfPopover.message}</span>
                                         </div>
                                     </div>
