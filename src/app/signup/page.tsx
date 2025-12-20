@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import CustomButton from "@/components/button";
@@ -25,6 +25,7 @@ import CryptoJS from "crypto-js";
 import { Spinner, Navbar, NavbarContent, NavbarBrand, NavbarMenuToggle } from "@heroui/react";
 import { Avatar } from "@heroui/avatar";
 import { recordLogin } from "@/utils/loginHistory";
+import { createSession } from "@/utils/session";
 import { useAuth } from "@/utils/authProvider";
 
 export default function Signup() {
@@ -33,6 +34,7 @@ export default function Signup() {
     const formContainerRef = useRef<HTMLDivElement>(null);
     const errorBoxRef = useRef<HTMLDivElement>(null);
     const isPageEntering = useRef(false);
+    const hasPageEntered = useRef(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const footerRef = useRef<HTMLDivElement>(null);
     const fakeTabRef = useRef<HTMLDivElement>(null);
@@ -150,6 +152,8 @@ export default function Signup() {
 
             await recordLogin(userCredential.user, true, "email");
 
+            await createSession(userCredential.user);
+
             await handlePageExit("/dashboard");
             router.push("/dashboard");
         } catch (error: unknown) {
@@ -176,7 +180,6 @@ export default function Signup() {
             setIsLoading(false);
         }
     };
-
     // register via google
     const handleGoogleSignup = async () => {
         setIsLoading(true);
@@ -188,6 +191,8 @@ export default function Signup() {
             const result = await signInWithPopup(auth, provider);
 
             await recordLogin(result.user, true, "google");
+
+            await createSession(result.user);
 
             await handlePageExit("/dashboard");
             router.push("/dashboard");
@@ -227,6 +232,8 @@ export default function Signup() {
 
             await recordLogin(result.user, true, "github");
 
+            await createSession(result.user);
+
             await handlePageExit("/dashboard");
             router.push("/dashboard");
         } catch (error: unknown) {
@@ -254,19 +261,18 @@ export default function Signup() {
     };
 
     // animation setup
-    const animateErrorBox = () => {
+    const animateErrorBox = useCallback((errorMessage: string) => {
         if (!errorBoxRef.current || !formContainerRef.current) return;
 
         gsap.killTweensOf(formContainerRef.current);
+        gsap.killTweensOf(errorBoxRef.current);
 
         const currentOpacity = gsap.getProperty(errorBoxRef.current, "opacity") as number;
-        const currentHeight = gsap.getProperty(errorBoxRef.current, "height") as number;
-        const isCurrentlyVisible = currentOpacity > 0 && currentHeight > 0;
+        const computedDisplay = getComputedStyle(errorBoxRef.current).display;
+        const isCurrentlyVisible = currentOpacity > 0.5 && computedDisplay !== "none";
 
         if (isCurrentlyVisible) {
-            gsap.killTweensOf(errorBoxRef.current);
-
-            setDisplayedError(error);
+            setDisplayedError(errorMessage);
 
             const tl = gsap.timeline();
             tl.to(errorBoxRef.current, {
@@ -283,9 +289,6 @@ export default function Signup() {
                 ease: "back.out(1.7)",
             });
         } else {
-            gsap.killTweensOf(errorBoxRef.current);
-            gsap.killTweensOf(formContainerRef.current);
-
             const currentContainerHeight = formContainerRef.current.offsetHeight;
 
             gsap.set(errorBoxRef.current, {
@@ -310,7 +313,7 @@ export default function Signup() {
                 height: currentContainerHeight,
             });
 
-            setDisplayedError(error);
+            setDisplayedError(errorMessage);
 
             const tl = gsap.timeline({
                 onComplete: () => {
@@ -340,16 +343,15 @@ export default function Signup() {
                     ease: "elastic.out(1, 0.5)",
                 }, 0.1);
         }
-    };
+    }, []);
 
-    const hideErrorBox = () => {
+    const hideErrorBox = useCallback(() => {
         if (!errorBoxRef.current || !formContainerRef.current) return;
 
         gsap.killTweensOf(errorBoxRef.current);
         gsap.killTweensOf(formContainerRef.current);
 
         const errorBoxHeight = errorBoxRef.current.offsetHeight;
-        const currentContainerHeight = formContainerRef.current.offsetHeight;
 
         const tl = gsap.timeline({
             onComplete: () => {
@@ -383,11 +385,13 @@ export default function Signup() {
                 },
                 0.1
             );
-    };
+    }, []);
 
     useLayoutEffect(() => {
-        if (loading || isRedirecting || !formContainerRef.current) return;
+        if (hasPageEntered.current) return;
+        if (loading || !formContainerRef.current) return;
 
+        hasPageEntered.current = true;
         isPageEntering.current = true;
         if (errorBoxRef.current) {
             gsap.killTweensOf(errorBoxRef.current);
@@ -417,7 +421,7 @@ export default function Signup() {
                 isPageEntering.current = false;
             }
         });
-    }, [loading, isRedirecting]);
+    }, [loading]);
 
     useLayoutEffect(() => {
         if (isPageEntering.current) {
@@ -429,11 +433,11 @@ export default function Signup() {
         }
 
         if (error && error.trim() && errorBoxRef.current) {
-            animateErrorBox();
+            animateErrorBox(error);
         } else if ((!error || !error.trim()) && errorBoxRef.current) {
             hideErrorBox();
         }
-    }, [error]);
+    }, [error, animateErrorBox, hideErrorBox]);
 
     const handlePageExit = (targetPath?: string) => {
         const isDashboardTarget = targetPath?.startsWith("/dashboard");

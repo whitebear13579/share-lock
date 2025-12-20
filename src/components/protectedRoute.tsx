@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/utils/authProvider";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@heroui/react";
@@ -15,21 +15,38 @@ export default function ProtectedRoute({
     requireAuth = true,
     redirectTo = "/login",
 }: ProtectedRouteProps) {
-    const { user, loading } = useAuth();
+    const { user, loading, syncSession } = useAuth();
     const router = useRouter();
-
-    // for test
-    const forceLoading = false;
+    const [isVerifying, setIsVerifying] = useState(true);
 
     useEffect(() => {
-        if (!loading && !forceLoading) {
-            if (requireAuth && !user) {
-                router.push(redirectTo);
-            } else if (!requireAuth && user) {
-                router.push("/dashboard");
+        const verifyAuth = async () => {
+            if (!loading) {
+                if (requireAuth && !user) {
+                    router.push(redirectTo);
+                } else if (!requireAuth && user) {
+                    await syncSession();
+                    router.push("/dashboard");
+                } else if (user) {
+                    await syncSession();
+                }
+                setIsVerifying(false);
             }
+        };
+
+        verifyAuth();
+    }, [user, loading, requireAuth, redirectTo, router, syncSession]);
+
+    if (loading || isVerifying) {
+        if (requireAuth) {
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-background">
+                    <Spinner size="lg" color="primary" />
+                </div>
+            );
         }
-    }, [user, loading, requireAuth, redirectTo, router]);
+        return null;
+    }
 
     if (requireAuth && !user) {
         return null;

@@ -10,6 +10,7 @@ interface AuthContextType {
     loading: boolean;
     logout: () => Promise<void>;
     recordUserLogin: (success: boolean, provider?: string, errorMessage?: string) => Promise<void>;
+    syncSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
     loading: true,
     logout: async () => { },
     recordUserLogin: async () => { },
+    syncSession: async () => { },
 });
 
 export const useAuth = () => {
@@ -27,21 +29,62 @@ export const useAuth = () => {
     return context;
 };
 
+const createServerSession = async (user: User): Promise<boolean> => {
+    try {
+        const idToken = await user.getIdToken();
+        const response = await fetch("/api/auth/session", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ idToken }),
+        });
+        return response.ok;
+    } catch (error) {
+        console.error("Failed to create server session:", error);
+        return false;
+    }
+};
+
+const deleteServerSession = async (): Promise<boolean> => {
+    try {
+        const response = await fetch("/api/auth/session", {
+            method: "DELETE",
+        });
+        return response.ok;
+    } catch (error) {
+        console.error("Failed to delete server session:", error);
+        return false;
+    }
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const isLoggingOut = useRef(false);
+    const sessionSynced = useRef(false);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             const currentPath = window.location.pathname;
             const publicPaths = ['/login', '/signup', '/reset-password', '/privacy-policy', '/terms-of-service', '/share', '/auth-action'];
             const isPublicPath = currentPath === '/' || publicPaths.some(path => currentPath.startsWith(path));
 
+            if (currentUser && !sessionSynced.current) {
+                await createServerSession(currentUser);
+                sessionSynced.current = true;
+            }
+
             if (!currentUser && !isPublicPath && !isLoggingOut.current) {
+                await deleteServerSession();
+                sessionSynced.current = false;
                 window.location.href = '/login';
                 return;
+            }
+
+            if (!currentUser) {
+                sessionSynced.current = false;
             }
 
             setUser(currentUser);
@@ -54,11 +97,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const logout = async () => {
         isLoggingOut.current = true;
         try {
+            await deleteServerSession();
+            sessionSynced.current = false;
             await signOut(auth);
+            router.push("/login");
         } finally {
             setTimeout(() => {
                 isLoggingOut.current = false;
             }, 1000);
+        }
+    };
+
+    const syncSession = async () => {
+        if (user && !sessionSynced.current) {
+            await createServerSession(user);
+            sessionSynced.current = true;
         }
     };
 
@@ -77,6 +130,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         loading,
         logout,
         recordUserLogin,
+        syncSession,
     };
 
     return (

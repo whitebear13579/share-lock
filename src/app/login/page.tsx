@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useCallback } from "react";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -31,6 +31,7 @@ import { Spinner, Navbar, NavbarContent, NavbarBrand, NavbarMenuToggle } from "@
 import { Avatar } from "@heroui/avatar";
 import { useAuth } from "@/utils/authProvider";
 import { recordLogin } from "@/utils/loginHistory";
+import { createSession } from "@/utils/session";
 import CustomTabs from "@/components/tabs";
 import { NAVIGATION_ROUTES } from "@/components/dashboardNavigation";
 
@@ -43,6 +44,7 @@ export default function Login() {
     const [password, setPassword] = React.useState("");
     const [isLoading, setIsLoading] = React.useState(false);
     const [error, setError] = React.useState("");
+    const [errorKey, setErrorKey] = React.useState(0);
     const [displayedError, setDisplayedError] = React.useState("");
     const [resetEmailSent, setResetEmailSent] = React.useState(false);
 
@@ -52,6 +54,7 @@ export default function Login() {
     const formContainerRef = useRef<HTMLDivElement>(null);
     const errorBoxRef = useRef<HTMLDivElement>(null);
     const isPageEntering = useRef(false);
+    const hasPageEntered = useRef(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const footerRef = useRef<HTMLDivElement>(null);
     const fakeTabRef = useRef<HTMLDivElement>(null);
@@ -59,14 +62,19 @@ export default function Login() {
 
     const [isMobile, setIsMobile] = React.useState(false);
     const [isRedirecting, setIsRedirecting] = React.useState(false);
+    const [fromLogout, setFromLogout] = React.useState(false);
+    const [isHydrated, setIsHydrated] = React.useState(false);
 
-    const fromLogoutRef = useRef(
-        typeof window !== "undefined" &&
-        sessionStorage.getItem("fromDashboardLogout") === "true"
-    );
+    useEffect(() => {
+        const wasFromLogout = sessionStorage.getItem("fromDashboardLogout") === "true";
+        setFromLogout(wasFromLogout);
+        setIsHydrated(true);
+    }, []);
 
     const toggleVisbility = () => setIsVisible(!isVisible); useEffect(() => {
-        if (fromLogoutRef.current) {
+        if (!isHydrated) return;
+
+        if (fromLogout) {
             return;
         }
 
@@ -78,7 +86,7 @@ export default function Login() {
             setIsRedirecting(true);
             router.replace('/dashboard');
         }
-    }, [user, loading, router, isRedirecting, isLoading]);
+    }, [user, loading, router, isRedirecting, isLoading, fromLogout, isHydrated]);
     useEffect(() => {
         const checkScreenSize = () => {
             setIsMobile(window.innerWidth < 1536);
@@ -95,6 +103,11 @@ export default function Login() {
         setPasswordError("");
         setError("");
         setResetEmailSent(false);
+    };
+
+    const setErrorWithAnimation = (errorMessage: string) => {
+        setError(errorMessage);
+        setErrorKey(prev => prev + 1);
     };
 
     // regular login
@@ -129,6 +142,8 @@ export default function Login() {
                 console.error("Failed to record successful login:", logError);
             }
 
+            await createSession(userCredential.user);
+
             await handlePageExit("/dashboard");
             router.push("/dashboard");
         } catch (error: unknown) {
@@ -157,13 +172,13 @@ export default function Login() {
                     setEmailError("此帳號已被停用");
                     break;
                 case "auth/invalid-credential":
-                    setError("帳號或密碼錯誤");
+                    setErrorWithAnimation("帳號或密碼錯誤");
                     break;
                 case "auth/too-many-requests":
-                    setError("受到速率限制，請稍後再試");
+                    setErrorWithAnimation("受到速率限制，請稍後再試");
                     break;
                 default:
-                    setError("登入失敗，請稍後再試");
+                    setErrorWithAnimation("登入失敗，請稍後再試");
             }
         } finally {
             setIsLoading(false);
@@ -184,7 +199,7 @@ export default function Login() {
             const actionCodeSettings = getPasswordResetActionCodeSettings();
             await sendPasswordResetEmail(auth, email, actionCodeSettings);
             setResetEmailSent(true);
-            setError("密碼重設信已發送");
+            setErrorWithAnimation("密碼重設信已發送");
         } catch (error: unknown) {
             console.error("reset pwd FAILED!!!:", error);
             if (typeof error === "object" && error !== null && "code" in error) {
@@ -194,14 +209,14 @@ export default function Login() {
                         setEmailError("找不到此電子郵件帳號");
                         break;
                     case "auth/too-many-requests":
-                        setError("受到速率限制，請稍後再試");
+                        setErrorWithAnimation("受到速率限制，請稍後再試");
                         break;
 
                     case "auth/invalid-email":
                         setEmailError("電子郵件格式不正確");
                         break;
                     default:
-                        setError("密碼重設失敗，請稍後再試");
+                        setErrorWithAnimation("密碼重設失敗，請稍後再試");
                 }
             }
         } finally {
@@ -226,6 +241,8 @@ export default function Login() {
                 console.error("Failed to record successful login:", logError);
             }
 
+            await createSession(result.user);
+
             await handlePageExit("/dashboard");
             router.push("/dashboard");
         } catch (error: unknown) {
@@ -240,18 +257,18 @@ export default function Login() {
 
             switch (firebaseError.code) {
                 case "auth/account-exists-with-different-credential":
-                    setError("電子郵件已使用其他方式註冊");
+                    setErrorWithAnimation("電子郵件已使用其他方式註冊");
                     break;
                 case "auth/popup-blocked":
-                    setError("彈出視窗遭到封鎖");
+                    setErrorWithAnimation("彈出視窗遭到封鎖");
                     break;
                 case "auth/cancelled-popup-request":
                     break;
                 case "auth/too-many-requests":
-                    setError("受到速率限制，請稍後再試");
+                    setErrorWithAnimation("受到速率限制，請稍後再試");
                     break;
                 default:
-                    setError("使用 Google 登入失敗，請重試");
+                    setErrorWithAnimation("使用 Google 登入失敗，請重試");
             }
         } finally {
             setIsLoading(false);
@@ -275,6 +292,8 @@ export default function Login() {
                 console.error("Failed to record successful login:", logError);
             }
 
+            await createSession(result.user);
+
             await handlePageExit("/dashboard");
             router.push("/dashboard");
         } catch (error: unknown) {
@@ -289,16 +308,16 @@ export default function Login() {
 
             switch (firebaseError.code) {
                 case "auth/account-exists-with-different-credential":
-                    setError("電子郵件已使用其他方式註冊");
+                    setErrorWithAnimation("電子郵件已使用其他方式註冊");
                     break;
                 case "auth/popup-blocked":
-                    setError("彈出視窗遭到封鎖");
+                    setErrorWithAnimation("彈出視窗遭到封鎖");
                     break;
                 case "auth/too-many-requests":
-                    setError("受到速率限制，請稍後再試");
+                    setErrorWithAnimation("受到速率限制，請稍後再試");
                     break;
                 default:
-                    setError("使用 GitHub 登入失敗，請重試");
+                    setErrorWithAnimation("使用 GitHub 登入失敗，請重試");
             }
         } finally {
             setIsLoading(false);
@@ -306,19 +325,18 @@ export default function Login() {
     };
 
     // animation setup
-    const animateErrorBox = () => {
+    const animateErrorBox = useCallback((errorMessage: string) => {
         if (!errorBoxRef.current || !formContainerRef.current) return;
 
         gsap.killTweensOf(formContainerRef.current);
+        gsap.killTweensOf(errorBoxRef.current);
 
         const currentOpacity = gsap.getProperty(errorBoxRef.current, "opacity") as number;
-        const currentHeight = gsap.getProperty(errorBoxRef.current, "height") as number;
-        const isCurrentlyVisible = currentOpacity > 0 && currentHeight > 0;
+        const computedDisplay = getComputedStyle(errorBoxRef.current).display;
+        const isCurrentlyVisible = currentOpacity > 0.5 && computedDisplay !== "none";
 
         if (isCurrentlyVisible) {
-            gsap.killTweensOf(errorBoxRef.current);
-
-            setDisplayedError(error);
+            setDisplayedError(errorMessage);
 
             const tl = gsap.timeline();
             tl.to(errorBoxRef.current, {
@@ -335,9 +353,6 @@ export default function Login() {
                 ease: "back.out(1.7)",
             });
         } else {
-            gsap.killTweensOf(errorBoxRef.current);
-            gsap.killTweensOf(formContainerRef.current);
-
             const currentContainerHeight = formContainerRef.current.offsetHeight;
 
             gsap.set(errorBoxRef.current, {
@@ -362,7 +377,7 @@ export default function Login() {
                 height: currentContainerHeight,
             });
 
-            setDisplayedError(error);
+            setDisplayedError(errorMessage);
 
             const tl = gsap.timeline({
                 onComplete: () => {
@@ -392,17 +407,15 @@ export default function Login() {
                     ease: "elastic.out(1, 0.5)",
                 }, 0.1);
         }
-    };
+    }, []);
 
-    const hideErrorBox = () => {
+    const hideErrorBox = useCallback(() => {
         if (!errorBoxRef.current || !formContainerRef.current) return;
-
 
         gsap.killTweensOf(errorBoxRef.current);
         gsap.killTweensOf(formContainerRef.current);
 
         const errorBoxHeight = errorBoxRef.current.offsetHeight;
-        const currentContainerHeight = formContainerRef.current.offsetHeight;
 
         const tl = gsap.timeline({
             onComplete: () => {
@@ -436,18 +449,20 @@ export default function Login() {
                 },
                 0.1
             );
-    };
+    }, []);
 
     useLayoutEffect(() => {
-        if (loading || isRedirecting || !formContainerRef.current) return;
+        if (hasPageEntered.current) return;
+        if (loading || !formContainerRef.current || !isHydrated) return;
 
+        hasPageEntered.current = true;
         isPageEntering.current = true;
         if (errorBoxRef.current) {
             gsap.killTweensOf(errorBoxRef.current);
         }
         gsap.killTweensOf(formContainerRef.current);
 
-        if (fromLogoutRef.current) {
+        if (fromLogout) {
             const overlay = document.getElementById("logout-transition-overlay");
             if (overlay) {
                 gsap.to(overlay, {
@@ -461,9 +476,7 @@ export default function Login() {
                 });
             }
 
-            if (typeof window !== "undefined") {
-                sessionStorage.removeItem("fromDashboardLogout");
-            }
+            sessionStorage.removeItem("fromDashboardLogout");
         }
 
         if (errorBoxRef.current) {
@@ -489,7 +502,7 @@ export default function Login() {
                 isPageEntering.current = false;
             }
         });
-    }, [loading, isRedirecting]);
+    }, [loading, isHydrated, fromLogout]);
 
     useLayoutEffect(() => {
         if (isPageEntering.current) {
@@ -501,11 +514,11 @@ export default function Login() {
         }
 
         if (error && error.trim() && errorBoxRef.current) {
-            animateErrorBox();
+            animateErrorBox(error);
         } else if ((!error || !error.trim()) && errorBoxRef.current) {
             hideErrorBox();
         }
-    }, [error]);
+    }, [error, errorKey, animateErrorBox, hideErrorBox]);
 
     const handlePageExit = (targetPath?: string) => {
         const isDashboardTarget = targetPath?.startsWith("/dashboard");
@@ -613,7 +626,7 @@ export default function Login() {
     }, [router]);
 
 
-    if ((loading || (user && !isRedirecting)) && !fromLogoutRef.current) {
+    if (!isHydrated || ((loading || (user && !isRedirecting)) && !fromLogout)) {
         return (
             <div className="flex flex-col min-h-screen max-h-screen bg-neutral-800">
                 <div className="flex-1 flex items-center justify-center bg-gradient-to-tr from-indigo-900 to-sky-800 rounded-b-5xl border-b-2 border-b-gray-500">
