@@ -67,6 +67,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (isLoggingOut.current) {
+                setUser(currentUser);
+                setLoading(false);
+                return;
+            }
+
             const currentPath = window.location.pathname;
             const publicPaths = ['/login', '/signup', '/reset-password', '/privacy-policy', '/terms-of-service', '/share', '/auth-action'];
             const isPublicPath = currentPath === '/' || publicPaths.some(path => currentPath.startsWith(path));
@@ -76,7 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 sessionSynced.current = true;
             }
 
-            if (!currentUser && !isPublicPath && !isLoggingOut.current) {
+            if (!currentUser && !isPublicPath) {
                 await deleteServerSession();
                 sessionSynced.current = false;
                 window.location.href = '/login';
@@ -97,14 +103,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const logout = async () => {
         isLoggingOut.current = true;
         try {
-            await signOut(auth);
-            sessionSynced.current = false;
             await deleteServerSession();
-            await new Promise(resolve => setTimeout(resolve, 30));
-            router.push("/login");
+            sessionSynced.current = false;
+            await signOut(auth);
+            await new Promise(resolve => setTimeout(resolve, 80));
+            router.replace("/login");
         } catch (error) {
             console.error("Logout failed:", error);
-            router.push("/login");
+            router.replace("/login");
         } finally {
             setTimeout(() => {
                 isLoggingOut.current = false;
