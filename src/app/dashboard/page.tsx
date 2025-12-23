@@ -779,7 +779,7 @@ export default function Dashboard() {
     }
 
     if (!user) {
-        return null;
+        router.push("/login");
     }
 
     return (
