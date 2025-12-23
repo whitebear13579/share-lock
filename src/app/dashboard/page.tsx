@@ -780,6 +780,7 @@ export default function Dashboard() {
 
     if (!user) {
         router.push("/login");
+        return;
     }
 
     return (
