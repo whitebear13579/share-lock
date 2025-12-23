@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
                 const shareDoc = shareSnapshot.docs[0];
                 shareInfo = {
                     shareId: shareDoc.id,
-                    shareUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/share/${shareDoc.id}`,
+                    shareUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/share/${shareDoc.id}`,
                     valid: shareDoc.data().valid,
                     createdAt: shareDoc.data().createdAt?.toDate?.()?.toISOString() || null,
                 };
