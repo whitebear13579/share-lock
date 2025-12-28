@@ -162,6 +162,7 @@ export default function Settings() {
 
     // State management
     const [isMobile, setIsMobile] = useState(false);
+    const [isLargeTab, setIslargeTab] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [displayName, setDisplayName] = useState("");
     const [currentPassword, setCurrentPassword] = useState("");
@@ -254,6 +255,7 @@ export default function Settings() {
     useEffect(() => {
         const checkScreenSize = () => {
             setIsMobile(window.innerWidth < 1536);
+            setIslargeTab(window.innerWidth >= 1024);
         };
 
         checkScreenSize();
@@ -849,9 +851,8 @@ export default function Settings() {
         try {
             const credential = EmailAuthProvider.credential(user.email!, currentPassword);
             await reauthenticateWithCredential(user, credential);
-
             await deleteUser(user);
-            router.push("/");
+            router.replace("/");
         } catch (error: unknown) {
             console.error("Error deleting account:", error);
         } finally {
@@ -891,12 +892,12 @@ export default function Settings() {
     return (
         <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55%">
             {/* Wide device naviBar */}
-            {!isMobile && (
+            {isLargeTab && (
                 <DashboardNavigation loading={loading} onLogout={handleLogout} />
             )}
 
             {/* Mobile device naviBar */}
-            {isMobile && (
+            {!isLargeTab && (
                 <Navbar
                     isMenuOpen={isMenuOpen}
                     onMenuOpenChange={setIsMenuOpen}
@@ -2422,6 +2423,12 @@ export default function Settings() {
                                         isLoading={isUpdating}
                                         isDisabled={!displayName.trim() || displayName === user?.displayName}
                                         className="text-blue-400 border-blue-500/50 border-2 text-base"
+                                        spinner={
+                                            <Spinner
+                                                size="sm"
+                                                color="default"
+                                            />
+                                        }
                                     >
                                         更新
                                     </CustomButton>
@@ -2485,6 +2492,12 @@ export default function Settings() {
                                         isLoading={isUpdating}
                                         isDisabled={!newEmail.trim() || !currentPassword || newEmail === user?.email}
                                         className="text-blue-400 border-blue-500/50 border-2 text-base"
+                                        spinner={
+                                            <Spinner
+                                                size="sm"
+                                                color="default"
+                                            />
+                                        }
                                     >
                                         更新
                                     </CustomButton>
@@ -2586,6 +2599,12 @@ export default function Settings() {
                                         isLoading={isUpdating}
                                         isDisabled={!currentPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
                                         className="text-blue-400  border-blue-500/50 border-2 text-base"
+                                        spinner={
+                                            <Spinner
+                                                size="sm"
+                                                color="default"
+                                            />
+                                        }
                                     >
                                         更新
                                     </CustomButton>
@@ -2642,6 +2661,12 @@ export default function Settings() {
                                         className="text-red-400 border-red-500/50 border-2"
                                         startContent={
                                             <Trash2 size={18} className="flex-shrink-0" />
+                                        }
+                                        spinner={
+                                            <Spinner
+                                                size="sm"
+                                                color="default"
+                                            />
                                         }
                                     >
                                         確認刪除
@@ -2700,6 +2725,12 @@ export default function Settings() {
                                         className="text-red-400 border-red-500/50 border-2"
                                         startContent={
                                             <PiHandWaving size={18} className="flex-shrink-0" />
+                                        }
+                                        spinner={
+                                            <Spinner
+                                                size="sm"
+                                                color="default"
+                                            />
                                         }
                                     >
                                         刪除帳號

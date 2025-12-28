@@ -24,6 +24,7 @@ import { auth } from "@/utils/firebase";
 export default function Dashboard() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [isLargeTab, setIslargeTab] = useState(false);
     const router = useRouter();
     const fakeMainRef = useRef<HTMLDivElement>(null);
     const fakeFooterRef = useRef<HTMLDivElement>(null);
@@ -654,6 +655,7 @@ export default function Dashboard() {
     useEffect(() => {
         const checkScreenSize = () => {
             setIsMobile(window.innerWidth < 1536);
+            setIslargeTab(window.innerWidth >= 1024);
         };
 
         checkScreenSize();
@@ -786,12 +788,12 @@ export default function Dashboard() {
     return (
         <div className="min-h-screen bg-linear-205 from-slate-700 to-neutral-800 to-55%">
             {/* wide device naviBar */}
-            {!isMobile && (
+            {isLargeTab && (
                 <DashboardNavigation loading={loading} onLogout={handleLogout} />
             )}
 
             {/* mobile device naviBar */}
-            {isMobile && (
+            {!isLargeTab && (
                 <Navbar
                     isMenuOpen={isMenuOpen}
                     onMenuOpenChange={setIsMenuOpen}

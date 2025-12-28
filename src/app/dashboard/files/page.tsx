@@ -9,7 +9,6 @@ import {
     Folder,
     House,
     LogOut,
-    Star,
     Search,
     Clock,
     Share2,
@@ -254,6 +253,7 @@ export default function MyFiles() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [isLargeTab, setIslargeTab] = useState(false);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [files, setFiles] = useState<FileData[]>([]);
     const [isLoadingFiles, setIsLoadingFiles] = useState(false);
@@ -784,6 +784,7 @@ export default function MyFiles() {
     useEffect(() => {
         const checkScreenSize = () => {
             setIsMobile(window.innerWidth < 1536);
+            setIslargeTab(window.innerWidth >= 1024);
         };
 
         checkScreenSize();
@@ -888,12 +889,12 @@ export default function MyFiles() {
             <div className="fixed top-0 left-0 right-0 h-screen bg-linear-205 from-slate-700 from-0% via-slate-700/50 via-30% to-transparent to-70% pointer-events-none" />
 
             {/* Wide device navigation */}
-            {!isMobile && (
+            {isLargeTab && (
                 <DashboardNavigation loading={loading} onLogout={handleLogout} />
             )}
 
             {/* Mobile device navigation */}
-            {isMobile && (
+            {!isLargeTab && (
                 <Navbar
                     isMenuOpen={isMenuOpen}
                     onMenuOpenChange={setIsMenuOpen}
@@ -1803,6 +1804,12 @@ export default function MyFiles() {
                                     startContent={
                                         !isDeleting && <Trash2 size={18} className="flex-shrink-0" />
                                     }
+                                    spinner={
+                                        <Spinner
+                                            size="sm"
+                                            color="default"
+                                        />
+                                    }
                                 >
                                     確認刪除
                                 </CustomButton>
@@ -1852,6 +1859,12 @@ export default function MyFiles() {
                                     startContent={!isRenaming && <Check size={18} />}
                                     onPress={handleRename}
                                     className="text-blue-400 border-blue-500/50 border-2 text-base"
+                                    spinner={
+                                        <Spinner
+                                            size="sm"
+                                            color="default"
+                                        />
+                                    }
                                 >
                                     確認
                                 </CustomButton>
