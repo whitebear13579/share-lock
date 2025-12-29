@@ -38,7 +38,7 @@ import { NAVIGATION_ROUTES } from "@/components/dashboardNavigation";
 export default function Login() {
     const [isVisible, setIsVisible] = React.useState(false);
     const router = useRouter();
-    const { user, loading, recordUserLogin } = useAuth();
+    const { user, loading, recordUserLogin, isLoggingOut } = useAuth();
 
     const [email, setEmail] = React.useState("");
     const [password, setPassword] = React.useState("");
@@ -74,7 +74,7 @@ export default function Login() {
     const toggleVisbility = () => setIsVisible(!isVisible); useEffect(() => {
         if (!isHydrated) return;
 
-        if (fromLogout) {
+        if (fromLogout || isLoggingOut) {
             return;
         }
 
@@ -86,7 +86,7 @@ export default function Login() {
             setIsRedirecting(true);
             router.replace('/dashboard');
         }
-    }, [user, loading, router, isRedirecting, isLoading, fromLogout, isHydrated]);
+    }, [user, loading, router, isRedirecting, isLoading, fromLogout, isHydrated, isLoggingOut]);
     useEffect(() => {
         const checkScreenSize = () => {
             setIsMobile(window.innerWidth < 1536);

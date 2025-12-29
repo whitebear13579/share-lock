@@ -8,6 +8,7 @@ import { recordLogin } from "@/utils/loginHistory";
 interface AuthContextType {
     user: User | null;
     loading: boolean;
+    isLoggingOut: boolean;
     logout: () => Promise<void>;
     recordUserLogin: (success: boolean, provider?: string, errorMessage?: string) => Promise<void>;
     syncSession: () => Promise<void>;
@@ -16,6 +17,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
+    isLoggingOut: false,
     logout: async () => { },
     recordUserLogin: async () => { },
     syncSession: async () => { },
@@ -61,13 +63,15 @@ const deleteServerSession = async (): Promise<boolean> => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const router = useRouter();
-    const isLoggingOut = useRef(false);
+    const isLoggingOutRef = useRef(false);
     const sessionSynced = useRef(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (isLoggingOut.current) {
+            // 如果正在登出，只更新狀態，不做任何導航或 session 操作
+            if (isLoggingOutRef.current) {
                 setUser(currentUser);
                 setLoading(false);
                 return;
@@ -101,20 +105,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, [router]);
 
     const logout = async () => {
-        isLoggingOut.current = true;
+        isLoggingOutRef.current = true;
+        setIsLoggingOut(true);
         try {
+            // 先刪除伺服器 session，確保 middleware 不會重定向到 dashboard
             await deleteServerSession();
             sessionSynced.current = false;
+
+            // 再登出 Firebase
             await signOut(auth);
-            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // 等待狀態穩定
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // 導航到登入頁面
             router.replace("/login");
         } catch (error) {
             console.error("Logout failed:", error);
             router.replace("/login");
         } finally {
+            // 延遲重置 flag，確保導航完成後才允許 onAuthStateChanged 正常運作
             setTimeout(() => {
-                isLoggingOut.current = false;
-            }, 1000);
+                isLoggingOutRef.current = false;
+                setIsLoggingOut(false);
+            }, 2000);
         }
     };
 
@@ -138,6 +152,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const value = {
         user,
         loading,
+        isLoggingOut,
         logout,
         recordUserLogin,
         syncSession,

@@ -410,10 +410,6 @@ function ResetPasswordContent() {
                 return;
             }
 
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-
             let currentElement = e.target as Node;
             let link: HTMLAnchorElement | null = null;
 
@@ -435,16 +431,20 @@ function ResetPasswordContent() {
                 }
             }
 
+            if (!link) {
+                return;
+            }
+
             if (link) {
                 const href = link.getAttribute("href");
                 if (href && (href.startsWith("/") || href.startsWith("#"))) {
-                    const originalHref = href;
-                    link.removeAttribute("href");
-                    link.style.pointerEvents = "none";
-
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
+
+                    const originalHref = href;
+                    link.removeAttribute("href");
+                    link.style.pointerEvents = "none";
 
                     (e as MouseEvent & { __handled?: boolean }).__handled = true;
 

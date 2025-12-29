@@ -245,7 +245,7 @@ const truncateFileName = (name: string, maxLength: number = 15): string => {
 };
 
 export default function MyFiles() {
-    const { user, loading, logout } = useAuth();
+    const { user, loading, logout, isLoggingOut } = useAuth();
     const router = useRouter();
     const fakeMainRef = useRef<HTMLDivElement>(null);
     const fakeFooterRef = useRef<HTMLDivElement>(null);
@@ -855,7 +855,7 @@ export default function MyFiles() {
         });
     }, [isLoadingDetail, fileDetail, isDetailModalOpen]);
 
-    if (loading) {
+    if (loading || isLoggingOut) {
         return (
             <div className="min-h-screen  bg-linear-205 from-slate-700  to-neutral-800 to-55% flex items-center justify-center">
                 <Spinner
@@ -870,7 +870,17 @@ export default function MyFiles() {
     }
 
     if (!user) {
-        return null;
+        return (
+            <div className="min-h-screen  bg-linear-205 from-slate-700  to-neutral-800 to-55% flex items-center justify-center">
+                <Spinner
+                    classNames={{ label: "text-xl text-white" }}
+                    variant="dots"
+                    size="lg"
+                    color="default"
+                    label="載入中..."
+                />
+            </div>
+        );
     }
 
     const filteredFiles = files.filter((file) =>

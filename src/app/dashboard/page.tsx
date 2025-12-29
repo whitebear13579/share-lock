@@ -150,7 +150,7 @@ export default function Dashboard() {
     const detailPrevHeightRef = useRef<number | null>(null);
     const detailIsAnimatingRef = useRef(false);
 
-    const { user, loading, logout } = useAuth();
+    const { user, loading, logout, isLoggingOut } = useAuth();
 
     // Fetch share invitations
     const fetchShareInvitations = async () => {
@@ -766,7 +766,7 @@ export default function Dashboard() {
         }
     };
 
-    if (loading) {
+    if (loading || isLoggingOut) {
         return (
             <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55% flex items-center justify-center">
                 <Spinner
@@ -781,8 +781,17 @@ export default function Dashboard() {
     }
 
     if (!user) {
-        router.push("/login");
-        return;
+        return (
+            <div className="min-h-screen bg-linear-205 from-slate-700  to-neutral-800 to-55% flex items-center justify-center">
+                <Spinner
+                    classNames={{ label: "text-xl text-white" }}
+                    variant="dots"
+                    size="lg"
+                    color="default"
+                    label="載入中..."
+                />
+            </div>
+        );
     }
 
     return (
