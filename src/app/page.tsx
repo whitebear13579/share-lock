@@ -99,6 +99,13 @@ export default function Home() {
         return () => window.removeEventListener('resize', checkScreenSize);
     }, []);
 
+    useEffect(() => {
+        const overlay = document.getElementById("logout-transition-overlay");
+        if (overlay) {
+            overlay.remove();
+        }
+    }, []);
+
     // animation setup
     const handlePageEnrty = () => {
         if (

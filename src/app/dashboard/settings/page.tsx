@@ -153,8 +153,20 @@ const getFirebaseErrorMessage = (errorCode: string): string => {
     }
 };
 
+const deleteServerSession = async (): Promise<boolean> => {
+    try {
+        const response = await fetch("/api/auth/session", {
+            method: "DELETE",
+        });
+        return response.ok;
+    } catch (error) {
+        console.error("Failed to delete server session:", error);
+        return false;
+    }
+};
+
 export default function Settings() {
-    const { user, loading, logout, isLoggingOut } = useAuth();
+    const { user, loading, logout, isLoggingOut, setLoggingOutState } = useAuth();
     const router = useRouter();
     const { setAvatarUrl } = useAvatarCache();
     const fakeMainRef = useRef<HTMLDivElement>(null);
@@ -851,11 +863,67 @@ export default function Settings() {
         try {
             const credential = EmailAuthProvider.credential(user.email!, currentPassword);
             await reauthenticateWithCredential(user, credential);
-            await deleteUser(user);
-            router.replace("/");
+            onDeleteAccountModalOpenChange();
+            await new Promise<void>((resolve) => {
+                const tl = gsap.timeline({
+                    onComplete: () => {
+                        (async () => {
+                            setLoggingOutState(true);
+
+                            const overlayContainer = document.createElement("div");
+                            overlayContainer.id = "logout-transition-overlay";
+                            overlayContainer.className = "fixed inset-0 z-[9999] pointer-events-none bg-neutral-800";
+
+                            const bgPanel = document.createElement("div");
+                            bgPanel.className = "absolute top-0 left-0 right-0 bg-gradient-to-tr from-indigo-900 from-25% to-sky-800 rounded-b-5xl border-b-2 border-b-gray-500 shadow-2xl";
+                            bgPanel.style.bottom = "64px";
+                            overlayContainer.appendChild(bgPanel);
+
+                            const footer = document.createElement("div");
+                            const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+                            footer.className = `absolute bottom-0 left-0 right-0 px-6 py-5 bg-neutral-800 flex flex-shrink-0 ${isDesktop ? 'justify-start' : 'justify-center'}`;
+                            footer.innerHTML = `
+                                <p class="text-center md:text-left px-0 md:px-8 text-gray-300 whitespace-nowrap">
+                                    © 2025 <span class="text-blue-500 font-bold">Share Lock</span>&nbsp;.&nbsp;&nbsp;&nbsp;All Rights Reserved.
+                                </p>
+                            `;
+                            overlayContainer.appendChild(footer);
+                            document.body.appendChild(overlayContainer);
+                            await deleteUser(user);
+                            await deleteServerSession();
+                            router.replace("/");
+                            resolve();
+                        })();
+                    },
+                });
+
+                tl.set([fakeMainRef.current, fakeFooterRef.current], {
+                    opacity: 1
+                });
+
+                const footerHeight = 64;
+                tl.to(
+                    fakeMainRef.current,
+                    {
+                        y: -footerHeight,
+                        duration: 0.8,
+                        ease: "power2.inOut"
+                    },
+                    "0"
+                );
+
+                tl.to(
+                    fakeFooterRef.current,
+                    {
+                        translateY: "0%",
+                        duration: 0.6,
+                        ease: "power2.out"
+                    },
+                    "-=0.4"
+                );
+            });
         } catch (error: unknown) {
             console.error("Error deleting account:", error);
-        } finally {
             setIsUpdating(false);
         }
     };
