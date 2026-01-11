@@ -570,8 +570,12 @@ export default function Settings() {
                         if (typeof window !== "undefined") {
                             sessionStorage.setItem("fromDashboardLogout", "true");
                         }
-                        await router.push("/login");
                         await logout();
+                        await new Promise(r => setTimeout(r, 100));
+                        await router.push("/login");
+                        setTimeout(() => {
+                            setLoggingOutState(false);
+                        }, 500);
                         resolve();
                     })();
                 },

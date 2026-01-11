@@ -245,7 +245,7 @@ const truncateFileName = (name: string, maxLength: number = 15): string => {
 };
 
 export default function MyFiles() {
-    const { user, loading, logout, isLoggingOut } = useAuth();
+    const { user, loading, logout, isLoggingOut, setLoggingOutState } = useAuth();
     const router = useRouter();
     const fakeMainRef = useRef<HTMLDivElement>(null);
     const fakeFooterRef = useRef<HTMLDivElement>(null);
@@ -422,8 +422,12 @@ export default function MyFiles() {
                         if (typeof window !== "undefined") {
                             sessionStorage.setItem("fromDashboardLogout", "true");
                         }
-                        await router.push("/login");
                         await logout();
+                        await new Promise(r => setTimeout(r, 100));
+                        await router.push("/login");
+                        setTimeout(() => {
+                            setLoggingOutState(false);
+                        }, 500);
                         resolve();
                     })();
                 },

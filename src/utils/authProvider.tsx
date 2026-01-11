@@ -90,7 +90,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (!currentUser && !isPublicPath) {
                 await deleteServerSession();
                 sessionSynced.current = false;
-                window.location.href = '/login';
+                router.replace('/login');
+                setUser(null);
+                setLoading(false);
                 return;
             }
 
@@ -112,16 +114,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             await deleteServerSession();
             sessionSynced.current = false;
             await signOut(auth);
-            await new Promise(resolve => setTimeout(resolve, 100));
-            router.replace("/login");
         } catch (error) {
             console.error("Logout failed:", error);
-            router.replace("/login");
-        } finally {
-            setTimeout(() => {
-                isLoggingOutRef.current = false;
-                setIsLoggingOut(false);
-            }, 2000);
         }
     };
 

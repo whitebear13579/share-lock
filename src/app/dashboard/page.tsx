@@ -150,7 +150,7 @@ export default function Dashboard() {
     const detailPrevHeightRef = useRef<number | null>(null);
     const detailIsAnimatingRef = useRef(false);
 
-    const { user, loading, logout, isLoggingOut } = useAuth();
+    const { user, loading, logout, isLoggingOut, setLoggingOutState } = useAuth();
 
     // Fetch share invitations
     const fetchShareInvitations = async () => {
@@ -579,8 +579,12 @@ export default function Dashboard() {
                         if (typeof window !== "undefined") {
                             sessionStorage.setItem("fromDashboardLogout", "true");
                         }
-                        await router.push("/login");
                         await logout();
+                        await new Promise(r => setTimeout(r, 100));
+                        await router.push("/login");
+                        setTimeout(() => {
+                            setLoggingOutState(false);
+                        }, 500);
                         resolve();
                     })();
                 },
