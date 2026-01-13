@@ -252,8 +252,8 @@ export default function MyFiles() {
     const [activeTab, setActiveTab] = useState("myFiles");
     const [searchQuery, setSearchQuery] = useState("");
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
-    const [isLargeTab, setIslargeTab] = useState(false);
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 1536 : false);
+    const [isLargeTab, setIslargeTab] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : false);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [files, setFiles] = useState<FileData[]>([]);
     const [isLoadingFiles, setIsLoadingFiles] = useState(false);

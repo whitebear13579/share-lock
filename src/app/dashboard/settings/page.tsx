@@ -173,8 +173,8 @@ export default function Settings() {
     const fakeFooterRef = useRef<HTMLDivElement>(null);
 
     // State management
-    const [isMobile, setIsMobile] = useState(false);
-    const [isLargeTab, setIslargeTab] = useState(false);
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 1536 : false);
+    const [isLargeTab, setIslargeTab] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [displayName, setDisplayName] = useState("");
     const [currentPassword, setCurrentPassword] = useState("");

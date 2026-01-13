@@ -23,8 +23,8 @@ import { auth } from "@/utils/firebase";
 
 export default function Dashboard() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
-    const [isLargeTab, setIslargeTab] = useState(false);
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 1536 : false);
+    const [isLargeTab, setIslargeTab] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : false);
     const router = useRouter();
     const fakeMainRef = useRef<HTMLDivElement>(null);
     const fakeFooterRef = useRef<HTMLDivElement>(null);
